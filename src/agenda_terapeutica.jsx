@@ -178,6 +178,7 @@ function Login({ onLogin }) {
   const [loading,  setLoading]  = useState(false);
   const [resetMode,setReset]    = useState(false);
   const [resetMsg, setResetMsg] = useState("");
+  const [showPass, setShowPass] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -216,9 +217,16 @@ function Login({ onLogin }) {
             </div>
             <div className="form-group">
               <label className="form-label">Contrasena</label>
-              <input className="form-input" type="password" value={pass}
-                onChange={e=>{setPass(e.target.value);setError("");}}
-                placeholder="••••••••" required />
+              <div style={{position:"relative"}}>
+                <input className="form-input" type={showPass?"text":"password"} value={pass}
+                  onChange={e=>{setPass(e.target.value);setError("");}}
+                  placeholder="••••••••" required style={{paddingRight:44}} />
+                <button type="button" onClick={()=>setShowPass(s=>!s)}
+                  style={{position:"absolute",right:14,top:"50%",transform:"translateY(-50%)",
+                    background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:18,padding:0,lineHeight:1}}>
+                  {showPass ? "🙈" : "👁"}
+                </button>
+              </div>
             </div>
             {error && (
               <div style={{color:"var(--danger)",fontSize:13,marginBottom:14,padding:"10px 14px",background:"rgba(248,113,113,.1)",borderRadius:8,border:"1px solid rgba(248,113,113,.3)"}}>

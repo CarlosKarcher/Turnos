@@ -1584,7 +1584,7 @@ function CambiarClaveForm({ usuario, onCambiado }) {
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-group" style={{marginBottom:16}}>
-        <label className="form-label">Nueva contraseña</label>
+        <label className="form-label">Nueva contraseña <span style={{color:"var(--text2)",fontWeight:"normal"}}>(mínimo 6 caracteres)</span></label>
         <div style={{position:"relative"}}>
           <input className="form-input" type={verN?"text":"password"} value={nueva} onChange={e=>setNueva(e.target.value)} placeholder="Mínimo 6 caracteres" style={{paddingRight:40}} />
           <button type="button" onClick={()=>setVerN(v=>!v)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:18}}>{verN?"🙈":"👁️"}</button>

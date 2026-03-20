@@ -294,14 +294,6 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   const finObj    = sesion?.fecha_fin    ? new Date(sesion.fecha_fin)    : null;
   const durIni    = esEdicion ? Math.round((finObj-fechaObj)/60000) : (servicios[0]?.duracion_minutos||60);
 
-  // Parsear telefono existente en partes: "+54 351 5550101" → area="351", num="5550101"
-  function parseTel(t="") {
-    const clean = t.replace(/^\+54\s*/,"").trim();
-    const parts  = clean.split(/\s+/);
-    return { area: parts[0]||"", num: parts.slice(1).join("")||"" };
-  }
-  const telParsed = parseTel(sesion?.cliente_telefono||"");
-
   const [form,setForm] = useState({
     terapeuta_id:    sesion?.terapeuta_id || (usuarioActual.rol==="terapeuta"?usuarioActual.id:terapeutas[0]?.id||""),
     servicio_id:     sesion?.servicio_id  || servicios[0]?.id||"",
@@ -310,8 +302,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
     hora:            sesion?.hora  || `${String(fechaObj.getHours()).padStart(2,"0")}:${String(fechaObj.getMinutes()).padStart(2,"0")}`,
     duracion_minutos:durIni,
     cliente_nombre:  sesion?.cliente_nombre   ||"",
-    tel_area:        telParsed.area,
-    tel_num:         telParsed.num,
+    cliente_telefono:sesion?.cliente_telefono ||"",
     cliente_email:   sesion?.cliente_email    ||"",
     motivo_consulta: sesion?.motivo_consulta  ||"",
     notas_sesion:    sesion?.notas_sesion     ||"",
@@ -341,8 +332,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   function guardar() {
     const fi=new Date(`${form.fecha}T${form.hora}`);
     const ff=addMinutes(fi,form.duracion_minutos);
-    const tel = ["+54", form.tel_area, form.tel_num].filter(Boolean).join(" ");
-    onGuardar({...(sesion||{}),...form,cliente_telefono:tel,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp,id:sesion?.id||Date.now().toString()});
+    onGuardar({...(sesion||{}),...form,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp,id:sesion?.id||Date.now().toString()});
   }
 
   const serv = servicios.find(s=>s.id===form.servicio_id);
@@ -432,23 +422,18 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
             <hr style={{border:"none",borderTop:"1px solid var(--border)",margin:"4px 0 18px"}} />
 
-            <div className="form-row" style={{alignItems:"flex-end"}}>
-              <div className="form-group" style={{flex:"0 0 auto"}}>
-                <label className="form-label">Tel. prefijo</label>
-                <div className="form-input" style={{opacity:.7,userSelect:"none",minWidth:58,textAlign:"center"}}>+54</div>
-              </div>
-              <div className="form-group" style={{flex:"0 0 100px"}}>
-                <label className="form-label">Característica</label>
-                <input className="form-input" placeholder="351" maxLength={5} value={form.tel_area} onChange={e=>set("tel_area",e.target.value.replace(/\D/g,""))} />
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Teléfono</label>
+                <div style={{display:"flex",alignItems:"center",gap:0}}>
+                  <span style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRight:"none",borderRadius:"10px 0 0 10px",padding:"10px 12px",color:"var(--text2)",fontSize:14,whiteSpace:"nowrap"}}>+54</span>
+                  <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} placeholder="351 401 7320" value={form.cliente_telefono} onChange={e=>set("cliente_telefono",e.target.value)} />
+                </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Número de celular</label>
-                <input className="form-input" placeholder="5550101" value={form.tel_num} onChange={e=>set("tel_num",e.target.value.replace(/\D/g,""))} />
+                <label className="form-label">Email</label>
+                <input className="form-input" type="email" value={form.cliente_email} onChange={e=>set("cliente_email",e.target.value)} />
               </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" value={form.cliente_email} onChange={e=>set("cliente_email",e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">Motivo de consulta</label>
@@ -1579,22 +1564,24 @@ export default function AgendaTerapeutica() {
 
   async function guardarSesion(datos){
     const esNueva=!sesiones.find(s=>s.id===datos.id);
+    // Eliminar campos del formulario que no existen en la tabla sesiones de la BD
+    const { duracion_minutos, fecha, hora, tel_area, tel_num, ...dbDatos } = datos;
     try {
       if(esNueva){
-        const resS = await crearSesion(datos);
+        const resS = await crearSesion(dbDatos);
         const sesConId = Array.isArray(resS) ? resS[0] : resS;
         if(!sesConId?.id){ alert("Error: la sesión no se guardó en la base de datos."); return; }
         setSesiones(ss=>[...ss, sesConId]);
-        if(datos.cliente_nombre && !clientes.find(c=>c.nombre===datos.cliente_nombre && c.terapeuta_id===datos.terapeuta_id)){
+        if(dbDatos.cliente_nombre && !clientes.find(c=>c.nombre===dbDatos.cliente_nombre && c.terapeuta_id===dbDatos.terapeuta_id)){
           try {
-            const resC = await dbInsert("clientes",{nombre:datos.cliente_nombre,telefono:datos.cliente_telefono||"",email:datos.cliente_email||"",motivo_consulta:datos.motivo_consulta||"",terapeuta_id:datos.terapeuta_id});
+            const resC = await dbInsert("clientes",{nombre:dbDatos.cliente_nombre,telefono:dbDatos.cliente_telefono||"",email:dbDatos.cliente_email||"",motivo_consulta:dbDatos.motivo_consulta||"",terapeuta_id:dbDatos.terapeuta_id});
             const cli = Array.isArray(resC) ? resC[0] : resC;
             if(cli?.id) setClientes(cs=>[...cs, cli]);
           } catch(ec){ console.warn("Cliente no guardado en DB:", ec.message); }
         }
       } else {
-        await actualizarSesion(datos.id, datos);
-        setSesiones(ss=>ss.map(s=>s.id===datos.id?{...s,...datos}:s));
+        await actualizarSesion(dbDatos.id, dbDatos);
+        setSesiones(ss=>ss.map(s=>s.id===dbDatos.id?{...s,...dbDatos}:s));
       }
       setModalSes(null); setEditando(null); setSesVista(null);
     } catch(e){

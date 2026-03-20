@@ -1540,7 +1540,7 @@ export default function AgendaTerapeutica() {
     }
   }
 
-  const terapeutas = usuarios.filter(u=>u.rol==="terapeuta");
+  const terapeutas = usuarios.filter(u=>u.rol==="terapeuta" || u.es_terapeuta===true);
   const sesionesFiltradas = usuario?.rol==="terapeuta"
     ? sesiones.filter(s=>s.terapeuta_id===usuario.id)
     : sesiones;

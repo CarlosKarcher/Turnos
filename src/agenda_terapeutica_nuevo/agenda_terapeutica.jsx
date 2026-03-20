@@ -703,10 +703,10 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
 // ══════════════════════════════════════════════════════════
 function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual }) {
   const hoy=new Date(); hoy.setHours(0,0,0,0);
-  const fin7=new Date(hoy); fin7.setDate(hoy.getDate()+7);
+  const fin14=new Date(hoy); fin14.setDate(hoy.getDate()+14);
   const sesHoy    =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime(); });
-  const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin7&&s.estado!=="cancelado"; });
-  const proximas  =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&s.estado!=="cancelado"; }).sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
+  const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; });
+  const proximas  =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; }).sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
   const completadas=sesiones.filter(s=>s.estado==="completado").length;
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terMap =Object.fromEntries(terapeutas.map(t=>[t.id,t]));
@@ -716,7 +716,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
       <div className="stats-grid">
         {[
           {label:"Sesiones hoy",val:sesHoy.length,    c:"var(--accent)"},
-          {label:"Esta semana", val:sesSemana.length,  c:"var(--accent2)"},
+          {label:"Próximos 14 días", val:sesSemana.length, c:"var(--accent2)"},
           {label:"Completadas", val:completadas,       c:"var(--success)"},
           {label:"Clientes",    val:clientes.length,   c:"var(--gold)"},
         ].map((s,i)=>(

@@ -637,11 +637,14 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
                   {ss.map(s=>{
                     const tc=terapMap[s.terapeuta_id]?.color||"#6366f1";
                     const sv=servMap[s.servicio_id];
+                    const hIni=s.fecha_inicio?new Date(s.fecha_inicio).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}):"";
+                    const hFin=s.fecha_fin?new Date(s.fecha_fin).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}):"";
                     return (
                       <div key={s.id} className="ses-chip"
                         style={{background:"#fff",color:"#111",borderLeft:`4px solid ${tc}`}}
                         onClick={e=>{e.stopPropagation();onVer(s);}}>
-                        {s.cliente_nombre} - {sv?.nombre}
+                        <span style={{fontSize:10,fontWeight:700,color:tc}}>{hIni}{hFin?` – ${hFin}`:""}</span>
+                        <span style={{marginLeft:4}}>{s.cliente_nombre} - {sv?.nombre}</span>
                       </div>
                     );
                   })}

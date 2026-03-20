@@ -1006,27 +1006,40 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
   }
 
   async function guardar(){
-    const datos={...form,especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),rol:"terapeuta",es_terapeuta:true};
-    delete datos.password;
-    if(editando){
-      await dbUpdate("terapeutas", editando.id, datos);
-      setUsuarios(us=>us.map(u=>u.id===editando.id?{...u,...datos}:u));
-    } else {
-      const nuevo = await dbInsert("terapeutas", datos);
-      setUsuarios(us=>[...us, nuevo]);
+    if(!form.nombre.trim()||!form.email.trim()){ alert("Nombre y email son obligatorios."); return; }
+    const datos={nombre:form.nombre,email:form.email,rol:"terapeuta",es_terapeuta:true,
+      especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),
+      color:form.color,descripcion:form.descripcion,activo:form.activo};
+    try {
+      if(editando){
+        const res = await dbUpdate("terapeutas", editando.id, datos);
+        const actualizado = Array.isArray(res) ? res[0] : res;
+        setUsuarios(us=>us.map(u=>u.id===editando.id?{...u,...(actualizado||datos)}:u));
+      } else {
+        const res = await dbInsert("terapeutas", datos);
+        const nuevo = Array.isArray(res) ? res[0] : res;
+        if(!nuevo?.id){ alert("Error: no se pudo guardar el terapeuta en la base de datos. Verificá tu sesión."); return; }
+        setUsuarios(us=>[...us, nuevo]);
+      }
+      setModal(false);
+    } catch(e){
+      alert("Error al guardar terapeuta: " + e.message);
     }
-    setModal(false);
   }
 
   async function toggleActivo(t){
-    await dbUpdate("terapeutas", t.id, {activo:!t.activo});
-    setUsuarios(us=>us.map(u=>u.id===t.id?{...u,activo:!u.activo}:u));
+    try {
+      await dbUpdate("terapeutas", t.id, {activo:!t.activo});
+      setUsuarios(us=>us.map(u=>u.id===t.id?{...u,activo:!u.activo}:u));
+    } catch(e){ alert("Error al actualizar: " + e.message); }
   }
 
   async function eliminarTerapeuta(t){
     if(!window.confirm(`¿Eliminar a "${t.nombre}"? Esta acción no se puede deshacer.`)) return;
-    await dbDelete("terapeutas", t.id);
-    setUsuarios(us=>us.filter(u=>u.id!==t.id));
+    try {
+      await dbDelete("terapeutas", t.id);
+      setUsuarios(us=>us.filter(u=>u.id!==t.id));
+    } catch(e){ alert("Error al eliminar: " + e.message); }
   }
 
   return (
@@ -1165,14 +1178,20 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
 
   async function guardar(){
     if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
-    if(editando){
-      await dbUpdate("servicios", editando.id, form);
-      setServicios(ss=>ss.map(s=>s.id===editando.id?{...s,...form}:s));
-    } else {
-      const nuevo = await dbInsert("servicios", form);
-      setServicios(ss=>[...ss, nuevo?.[0]||{...form,id:"srv"+Date.now()}]);
+    try {
+      if(editando){
+        await dbUpdate("servicios", editando.id, form);
+        setServicios(ss=>ss.map(s=>s.id===editando.id?{...s,...form}:s));
+      } else {
+        const res = await dbInsert("servicios", form);
+        const nuevo = Array.isArray(res) ? res[0] : res;
+        if(!nuevo?.id){ alert("Error: no se pudo guardar la terapia en la base de datos."); return; }
+        setServicios(ss=>[...ss, nuevo]);
+      }
+      setModal(false);
+    } catch(e){
+      alert("Error al guardar terapia: " + e.message);
     }
-    setModal(false);
   }
 
   async function toggleServicio(s){

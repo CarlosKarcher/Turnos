@@ -1059,7 +1059,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
     setEditando(u);
     setVerPass(false);
     setForm(u?{nombre:u.nombre,email:u.email,password_text:u.password_text||"",especialidades:(u.especialidades||[]).join(", "),color:u.color,descripcion:u.descripcion||"",activo:u.activo}
-               :{nombre:"",email:"",password_text:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
+               :{nombre:"",email:"",password_text:"1234",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
     setModal(true);
   }
 
@@ -1071,7 +1071,8 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
       es_terapeuta:true,
       especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),
       color:form.color,descripcion:form.descripcion,activo:form.activo,
-      password_text:form.password_text||null};
+      password_text: editando ? (form.password_text||null) : "1234",
+      debe_cambiar_clave: editando ? editando.debe_cambiar_clave : true};
     try {
       if(editando){
         const res = await dbUpdate("terapeutas", editando.id, datos);
@@ -1552,6 +1553,58 @@ function PanelAdmin({ usuarios, setUsuarios, servicios, setServicios, sesiones, 
 }
 
 // ══════════════════════════════════════════════════════════
+//  CAMBIAR CLAVE OBLIGATORIO (primer ingreso)
+// ══════════════════════════════════════════════════════════
+function CambiarClaveForm({ usuario, onCambiado }) {
+  const [nueva, setNueva]       = useState("");
+  const [confirma, setConfirma] = useState("");
+  const [verN, setVerN]         = useState(false);
+  const [verC, setVerC]         = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    if (nueva.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
+    if (nueva !== confirma) { setError("Las contraseñas no coinciden."); return; }
+    if (nueva === "1234") { setError("No podés usar '1234' como contraseña personal."); return; }
+    setLoading(true);
+    try {
+      await authCambiarPassword(nueva);
+      await dbUpdate("terapeutas", usuario.id, { debe_cambiar_clave: false, password_text: nueva });
+      onCambiado({ ...usuario, debe_cambiar_clave: false, password_text: nueva });
+    } catch(err) {
+      setError(err.message || "Error al cambiar la contraseña.");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="form-group" style={{marginBottom:16}}>
+        <label className="form-label">Nueva contraseña</label>
+        <div style={{position:"relative"}}>
+          <input className="form-input" type={verN?"text":"password"} value={nueva} onChange={e=>setNueva(e.target.value)} placeholder="Mínimo 6 caracteres" style={{paddingRight:40}} />
+          <button type="button" onClick={()=>setVerN(v=>!v)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:18}}>{verN?"🙈":"👁️"}</button>
+        </div>
+      </div>
+      <div className="form-group" style={{marginBottom:20}}>
+        <label className="form-label">Confirmar contraseña</label>
+        <div style={{position:"relative"}}>
+          <input className="form-input" type={verC?"text":"password"} value={confirma} onChange={e=>setConfirma(e.target.value)} placeholder="Repetí la contraseña" style={{paddingRight:40}} />
+          <button type="button" onClick={()=>setVerC(v=>!v)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:18}}>{verC?"🙈":"👁️"}</button>
+        </div>
+      </div>
+      {error && <div style={{background:"#ef444420",border:"1px solid #ef4444",borderRadius:8,padding:"10px 14px",color:"#ef4444",fontSize:13,marginBottom:16}}>{error}</div>}
+      <button type="submit" className="btn btn-primary" style={{width:"100%"}} disabled={loading}>
+        {loading ? "Guardando..." : "Establecer contraseña"}
+      </button>
+    </form>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
 //  APP PRINCIPAL
 // ══════════════════════════════════════════════════════════
 export default function AgendaTerapeutica() {
@@ -1684,6 +1737,20 @@ export default function AgendaTerapeutica() {
 
   if(!usuario) return (
     <><style>{CSS}</style><Login onLogin={async u=>{setUsuario(u);await cargarDatos(u);setVista("dashboard");}}/></>
+  );
+
+  // ── Modal forzar cambio de clave ──────────────────────────
+  if(usuario.debe_cambiar_clave) return (
+    <><style>{CSS}</style>
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)"}}>
+      <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:16,padding:40,width:400,maxWidth:"90vw"}}>
+        <h2 style={{color:"var(--accent)",marginBottom:8,textAlign:"center"}}>Cambiar contraseña</h2>
+        <p style={{color:"var(--text2)",fontSize:14,textAlign:"center",marginBottom:24}}>
+          Es tu primer ingreso. Debés establecer una contraseña personal para continuar.
+        </p>
+        <CambiarClaveForm usuario={usuario} onCambiado={async(u)=>{setUsuario(u);}} />
+      </div>
+    </div></>
   );
 
   const navAdmin=[

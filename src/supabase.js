@@ -219,6 +219,5 @@ export async function getTerapeutas() {
 
 export async function getClientes(terapeutaId, rol) {
   if (rol === "admin") return dbSelect("clientes", "?order=nombre.asc");
-  // Para terapeuta: clientes que tuvieron sesiones con él
-  return dbSelect("clientes", `?order=nombre.asc`);
+  return dbSelect("clientes", `?terapeuta_id=eq.${terapeutaId}&order=nombre.asc`);
 }

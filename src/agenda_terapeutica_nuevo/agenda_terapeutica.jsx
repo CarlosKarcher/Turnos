@@ -858,13 +858,23 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
 // ══════════════════════════════════════════════════════════
 //  LISTA CLIENTES
 // ══════════════════════════════════════════════════════════
-function ListaClientes({ clientes, setClientes, sesiones, servicios }) {
+function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas, usuarioActual }) {
   const [busqueda,setBusqueda]=useState("");
+  const [filtroTer,setFiltroTer]=useState("todos");
   const [sel,setSel]=useState(null);
   const [editando,setEditando]=useState(null);
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
-  const filtrados=clientes.filter(c=>c.nombre?.toLowerCase().includes(busqueda.toLowerCase())||c.email?.toLowerCase().includes(busqueda.toLowerCase()));
-  const sesCli=sel?sesiones.filter(s=>s.cliente_id===sel.id||s.cliente_nombre===sel.nombre):[];
+  const terMap=Object.fromEntries((terapeutas||[]).map(t=>[t.id,t]));
+  const esAdmin=usuarioActual?.rol==="admin";
+
+  const filtrados=clientes
+    .filter(c=>filtroTer==="todos"||c.terapeuta_id===filtroTer)
+    .filter(c=>c.nombre?.toLowerCase().includes(busqueda.toLowerCase())||c.email?.toLowerCase().includes(busqueda.toLowerCase()));
+
+  const sesCli=sel?sesiones.filter(s=>
+    (s.cliente_id===sel.id || s.cliente_nombre===sel.nombre) &&
+    s.terapeuta_id===sel.terapeuta_id
+  ):[];
 
   async function guardarCliente(id, datos){
     await dbUpdate("clientes", id, {...datos, updated_at: new Date().toISOString()});
@@ -877,13 +887,21 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios }) {
   return (
     <div style={{display:"grid",gridTemplateColumns:sel?"1fr 1fr":"1fr",gap:20}}>
       <div>
-        <input className="form-input" placeholder="Buscar cliente..." value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}} />
+        <div style={{display:"flex",gap:10,marginBottom:16}}>
+          <input className="form-input" placeholder="Buscar cliente..." value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{flex:1}} />
+          {esAdmin && (
+            <select className="form-input" style={{maxWidth:200}} value={filtroTer} onChange={e=>{setFiltroTer(e.target.value);setSel(null);}}>
+              <option value="todos">Todos los terapeutas</option>
+              {(terapeutas||[]).map(t=><option key={t.id} value={t.id}>{t.nombre}</option>)}
+            </select>
+          )}
+        </div>
         <div className="card" style={{padding:0}}>
           <table>
-            <thead><tr><th>Cliente</th><th>Contacto</th><th>Sesiones</th></tr></thead>
+            <thead><tr><th>Cliente</th>{esAdmin&&<th>Terapeuta</th>}<th>Contacto</th><th>Sesiones</th></tr></thead>
             <tbody>
               {filtrados.map(c=>{
-                const tot=sesiones.filter(s=>s.cliente_id===c.id||s.cliente_nombre===c.nombre).length;
+                const tot=sesiones.filter(s=>(s.cliente_id===c.id||s.cliente_nombre===c.nombre)&&s.terapeuta_id===c.terapeuta_id).length;
                 return (
                   <tr key={c.id} style={{cursor:"pointer",background:sel?.id===c.id?"var(--surface2)":""}} onClick={()=>setSel(c===sel?null:c)}>
                     <td>
@@ -895,12 +913,22 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios }) {
                         </div>
                       </div>
                     </td>
+                    {esAdmin && (
+                      <td>
+                        {terMap[c.terapeuta_id] ? (
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <div className="avatar" style={{width:24,height:24,fontSize:10,background:(terMap[c.terapeuta_id]?.color||"#6366f1")+"33",color:terMap[c.terapeuta_id]?.color||"#a5b4fc"}}>{terMap[c.terapeuta_id]?.nombre?.[0]}</div>
+                            <span style={{fontSize:12}}>{terMap[c.terapeuta_id]?.nombre}</span>
+                          </div>
+                        ) : <span style={{fontSize:12,color:"var(--text2)"}}>—</span>}
+                      </td>
+                    )}
                     <td style={{fontSize:12,color:"var(--text2)"}}>{c.telefono}<br/>{c.email}</td>
                     <td><span style={{fontWeight:700,color:"var(--accent2)"}}>{tot}</span></td>
                   </tr>
                 );
               })}
-              {filtrados.length===0 && <tr><td colSpan={3} style={{textAlign:"center",color:"var(--text2)",padding:20}}>Sin clientes</td></tr>}
+              {filtrados.length===0 && <tr><td colSpan={esAdmin?4:3} style={{textAlign:"center",color:"var(--text2)",padding:20}}>Sin clientes</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1456,9 +1484,9 @@ export default function AgendaTerapeutica() {
         const nueva = await crearSesion(datos).catch(()=>null);
         const sesConId = nueva?.[0] || {...datos, id:"ses"+Date.now(), estado:datos.estado||"confirmado"};
         setSesiones(ss=>[...ss, sesConId]);
-        if(datos.cliente_nombre && !clientes.find(c=>c.nombre===datos.cliente_nombre)){
-          const cli = await dbInsert("clientes",{nombre:datos.cliente_nombre,telefono:datos.cliente_telefono,email:datos.cliente_email,motivo_consulta:datos.motivo_consulta}).catch(()=>null);
-          setClientes(cs=>[...cs, cli?.[0]||{id:"c"+Date.now(),nombre:datos.cliente_nombre,telefono:datos.cliente_telefono,email:datos.cliente_email,motivo_consulta:datos.motivo_consulta}]);
+        if(datos.cliente_nombre && !clientes.find(c=>c.nombre===datos.cliente_nombre && c.terapeuta_id===datos.terapeuta_id)){
+          const cli = await dbInsert("clientes",{nombre:datos.cliente_nombre,telefono:datos.cliente_telefono,email:datos.cliente_email,motivo_consulta:datos.motivo_consulta,terapeuta_id:datos.terapeuta_id}).catch(()=>null);
+          setClientes(cs=>[...cs, cli?.[0]||{id:"c"+Date.now(),nombre:datos.cliente_nombre,telefono:datos.cliente_telefono,email:datos.cliente_email,motivo_consulta:datos.motivo_consulta,terapeuta_id:datos.terapeuta_id}]);
         }
       } else {
         await actualizarSesion(datos.id, datos).catch(()=>null);
@@ -1557,7 +1585,7 @@ export default function AgendaTerapeutica() {
         {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} />}
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
         {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} onVer={setSesVista} onCambiarEstado={cambiarEstado} />}
-        {vista==="clientes"   && <ListaClientes clientes={clientes} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} />}
+        {vista==="clientes"   && <ListaClientes clientes={clientes} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={usuario} />}
         {vista==="admin" && usuario.rol==="admin" && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>
 

@@ -121,32 +121,30 @@ export async function authCambiarPassword(nuevaPassword) {
   return res.json();
 }
 
-// ── AUTH: Crear usuario (signup + confirmar via RPC) ─────
+// ── AUTH: Crear usuario via Edge Function (admin only) ───
 export async function crearUsuarioAuth(email, password, terapeutaId) {
   const emailLower = email.trim().toLowerCase();
-  // 1. Crear usuario via signup estándar
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+  // Llama Edge Function con service role — bypassa restricción de signups
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/crear-usuario-auth`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: emailLower, password }),
   });
   const data = await res.json();
-  // Si ya existe (422) no es un error bloqueante
-  if (!res.ok && res.status !== 422) throw new Error(data.msg || data.message || "No se pudo crear el usuario");
+  if (!res.ok || data.error) throw new Error(data.error || "No se pudo crear el usuario");
 
-  // 2. Confirmar email y vincular auth_user_id via función SQL segura
-  await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmar_nuevo_usuario`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${_sessionToken}`,
-    },
-    body: JSON.stringify({ p_email: emailLower, p_terapeuta_id: terapeutaId }),
-  });
+  // Vincular auth_user_id en terapeutas via RPC
+  if (data.id && terapeutaId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmar_nuevo_usuario`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${_sessionToken}`,
+      },
+      body: JSON.stringify({ p_email: emailLower, p_terapeuta_id: terapeutaId }),
+    });
+  }
   return data;
 }
 

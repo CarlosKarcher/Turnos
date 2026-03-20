@@ -845,64 +845,68 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
 
   return (
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" style={{maxWidth:560}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+      <div className="modal" style={{maxWidth:520}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <h2 className="modal-title" style={{marginBottom:0}}>Editar cliente</h2>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>x</button>
         </div>
-        <div style={{display:"grid",gap:14}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div className="form-group" style={{gridColumn:"1/-1"}}>
-              <label className="form-label">Nombre y Apellido *</label>
-              <input className="form-input" value={form.nombre} onChange={e=>set("nombre",e.target.value)} placeholder="Nombre completo" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Teléfono</label>
-              <div style={{display:"flex",alignItems:"center",gap:0}}>
-                <input className="form-input" style={{borderRadius:"10px 0 0 10px",width:68,textAlign:"center",borderRight:"none",padding:"10px 8px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} placeholder="+54" />
-                <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} value={form.telefono} onChange={e=>set("telefono",e.target.value)} placeholder="351 401 7320" />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" value={form.email} onChange={e=>set("email",e.target.value)} placeholder="email@ejemplo.com" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Edad</label>
-              <input className="form-input" type="number" min="0" max="120" value={form.edad} onChange={e=>set("edad",e.target.value)} placeholder="Ej: 35" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Fecha de Nacimiento</label>
-              <input className="form-input" type="date" value={form.fecha_nacimiento} onChange={e=>set("fecha_nacimiento",e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Género</label>
-              <select className="form-input" value={form.genero} onChange={e=>set("genero",e.target.value)}>
-                <option value="">Seleccionar...</option>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {/* Nombre + Género en la misma fila */}
+          <div className="form-group" style={{gridColumn:"1/-1"}}>
+            <label className="form-label">Nombre y Apellido *</label>
+            <div style={{display:"flex",gap:8}}>
+              <input className="form-input" style={{flex:1}} maxLength={25} value={form.nombre} onChange={e=>set("nombre",e.target.value)} />
+              <select className="form-input" style={{width:130,flexShrink:0}} value={form.genero} onChange={e=>set("genero",e.target.value)}>
+                <option value="">Género</option>
                 <option value="F">Femenino</option>
                 <option value="M">Masculino</option>
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">Lugar de Residencia</label>
-              <input className="form-input" value={form.lugar_residencia} onChange={e=>set("lugar_residencia",e.target.value)} placeholder="Ciudad, Provincia" />
+          </div>
+          {/* Teléfono */}
+          <div className="form-group">
+            <label className="form-label">Teléfono</label>
+            <div style={{display:"flex",alignItems:"center",gap:0}}>
+              <input className="form-input" style={{borderRadius:"10px 0 0 10px",width:62,textAlign:"center",borderRight:"none",padding:"10px 6px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} />
+              <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} value={form.telefono} onChange={e=>set("telefono",e.target.value)} />
             </div>
-            <div className="form-group">
-              <label className="form-label">Lugar de Origen</label>
-              <input className="form-input" value={form.lugar_origen} onChange={e=>set("lugar_origen",e.target.value)} placeholder="Ciudad, País" />
-            </div>
-            <div className="form-group" style={{gridColumn:"1/-1"}}>
-              <label className="form-label">Tema de la Consulta</label>
-              <textarea className="form-input" rows={2} value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} placeholder="Motivo principal de consulta..." style={{resize:"vertical"}} />
-            </div>
-            <div className="form-group" style={{gridColumn:"1/-1"}}>
-              <label className="form-label">Emociones Actuales</label>
-              <textarea className="form-input" rows={2} value={form.emociones_actuales} onChange={e=>set("emociones_actuales",e.target.value)} placeholder="Cómo se siente actualmente..." style={{resize:"vertical"}} />
-            </div>
-            <div className="form-group" style={{gridColumn:"1/-1"}}>
-              <label className="form-label">Notas adicionales</label>
-              <textarea className="form-input" rows={2} value={form.notas} onChange={e=>set("notas",e.target.value)} placeholder="Otras observaciones..." style={{resize:"vertical"}} />
-            </div>
+          </div>
+          {/* Email */}
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" value={form.email} onChange={e=>set("email",e.target.value)} />
+          </div>
+          {/* Edad + Fecha nacimiento */}
+          <div className="form-group">
+            <label className="form-label">Edad</label>
+            <input className="form-input" type="number" min="0" max="120" value={form.edad} onChange={e=>set("edad",e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Fecha de Nacimiento</label>
+            <input className="form-input" type="date" value={form.fecha_nacimiento} onChange={e=>set("fecha_nacimiento",e.target.value)} />
+          </div>
+          {/* Residencia + Origen */}
+          <div className="form-group">
+            <label className="form-label">Residencia</label>
+            <input className="form-input" value={form.lugar_residencia} onChange={e=>set("lugar_residencia",e.target.value)} placeholder="Ciudad, Provincia" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Origen</label>
+            <input className="form-input" value={form.lugar_origen} onChange={e=>set("lugar_origen",e.target.value)} placeholder="Ciudad, País" />
+          </div>
+          {/* Motivo */}
+          <div className="form-group" style={{gridColumn:"1/-1"}}>
+            <label className="form-label">Tema de la Consulta</label>
+            <textarea className="form-input" rows={2} value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} style={{resize:"vertical"}} />
+          </div>
+          {/* Emociones + Notas lado a lado */}
+          <div className="form-group">
+            <label className="form-label">Emociones Actuales</label>
+            <textarea className="form-input" rows={2} value={form.emociones_actuales} onChange={e=>set("emociones_actuales",e.target.value)} style={{resize:"vertical"}} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Notas adicionales</label>
+            <textarea className="form-input" rows={2} value={form.notas} onChange={e=>set("notas",e.target.value)} style={{resize:"vertical"}} />
           </div>
         </div>
         <div className="form-actions">

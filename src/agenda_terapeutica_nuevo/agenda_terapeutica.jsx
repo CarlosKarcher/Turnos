@@ -882,8 +882,8 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
             <input className="form-input" style={{padding:"7px 10px"}} type="email" value={form.email} onChange={e=>set("email",e.target.value)} />
           </div>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr 1fr",gap:"6px 8px",alignItems:"end"}}>
-          {/* Edad | Fecha | Residencia | Origen */}
+        <div style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr",gap:"6px 8px",alignItems:"end"}}>
+          {/* Edad | Fecha | Residencia */}
           <div className="form-group" style={{marginBottom:6}}>
             <L t="Edad"/>
             <input className="form-input" type="number" min="0" max="120" maxLength={3} style={{padding:"7px 6px",textAlign:"center"}} value={form.edad} onChange={e=>set("edad",e.target.value)} />
@@ -893,12 +893,8 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
             <input className="form-input" type="date" style={{padding:"7px 8px",fontSize:12}} value={form.fecha_nacimiento} onChange={e=>set("fecha_nacimiento",e.target.value)} />
           </div>
           <div className="form-group" style={{marginBottom:6}}>
-            <L t="Residencia"/>
+            <L t="Lugar de Residencia"/>
             <input className="form-input" style={{padding:"7px 10px"}} value={form.lugar_residencia} onChange={e=>set("lugar_residencia",e.target.value)} />
-          </div>
-          <div className="form-group" style={{marginBottom:6}}>
-            <L t="Origen"/>
-            <input className="form-input" style={{padding:"7px 10px"}} value={form.lugar_origen} onChange={e=>set("lugar_origen",e.target.value)} />
           </div>
         </div>
         <div className="form-group" style={{marginBottom:6}}>

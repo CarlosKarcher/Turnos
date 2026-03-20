@@ -877,7 +877,9 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
   ):[];
 
   async function guardarCliente(id, datos){
+    try {
     await dbUpdate("clientes", id, {...datos, updated_at: new Date().toISOString()});
+    } catch(e){ alert("Error al guardar cliente: " + e.message); throw e; }
     setClientes(cs=>cs.map(c=>c.id===id?{...c,...datos}:c));
     setSel(prev=>prev?.id===id?{...prev,...datos}:prev);
   }
@@ -1195,25 +1197,29 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
   }
 
   async function toggleServicio(s){
-    await dbUpdate("servicios", s.id, {activo:!s.activo});
-    setServicios(ss=>ss.map(x=>x.id===s.id?{...x,activo:!x.activo}:x));
+    try {
+      await dbUpdate("servicios", s.id, {activo:!s.activo});
+      setServicios(ss=>ss.map(x=>x.id===s.id?{...x,activo:!x.activo}:x));
+    } catch(e){ alert("Error al actualizar terapia: " + e.message); }
   }
 
   async function eliminar(s, qty){
     if(qty>0){ alert(`No se puede eliminar "${s.nombre}" porque tiene ${qty} sesion/es registradas.`); return; }
     if(!window.confirm(`¿Eliminar "${s.nombre}"?`)) return;
-    await dbDelete("servicios", s.id);
-    setServicios(ss=>ss.filter(x=>x.id!==s.id));
+    try {
+      await dbDelete("servicios", s.id);
+      setServicios(ss=>ss.filter(x=>x.id!==s.id));
+    } catch(e){ alert("Error al eliminar terapia: " + e.message); }
   }
 
   async function limpiarNoUsadas(){
     const noUsadas=servicios.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length===0);
-    if(noUsadas.length===0){ alert("No hay especialidades sin usar."); return; }
+    if(noUsadas.length===0){ alert("No hay terapias sin usar."); return; }
     if(!window.confirm(`¿Eliminar ${noUsadas.length} terapia/s sin sesiones?`)) return;
-    for(const s of noUsadas){
-      await dbDelete("servicios", s.id);
-    }
-    setServicios(ss=>ss.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length>0));
+    try {
+      for(const s of noUsadas){ await dbDelete("servicios", s.id); }
+      setServicios(ss=>ss.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length>0));
+    } catch(e){ alert("Error al limpiar terapias: " + e.message); }
   }
 
   return (
@@ -1529,10 +1535,8 @@ export default function AgendaTerapeutica() {
       if (sess) setSesiones(sess);
       if (clis) setClientes(clis);
     } catch(e){
-      console.warn("Usando datos locales (Supabase no configurado):", e.message);
-      // Fallback a datos mock si Supabase no está configurado aún
-      setSesiones(SESIONES_MOCK);
-      setClientes(CLIENTES_MOCK);
+      console.error("Error cargando datos desde Supabase:", e.message);
+      alert("Error al conectar con la base de datos: " + e.message);
     }
   }
 
@@ -1545,32 +1549,41 @@ export default function AgendaTerapeutica() {
     const esNueva=!sesiones.find(s=>s.id===datos.id);
     try {
       if(esNueva){
-        // Intentar guardar en Supabase
-        const nueva = await crearSesion(datos).catch(()=>null);
-        const sesConId = nueva?.[0] || {...datos, id:"ses"+Date.now(), estado:datos.estado||"confirmado"};
+        const resS = await crearSesion(datos);
+        const sesConId = Array.isArray(resS) ? resS[0] : resS;
+        if(!sesConId?.id){ alert("Error: la sesión no se guardó en la base de datos."); return; }
         setSesiones(ss=>[...ss, sesConId]);
         if(datos.cliente_nombre && !clientes.find(c=>c.nombre===datos.cliente_nombre && c.terapeuta_id===datos.terapeuta_id)){
-          const cli = await dbInsert("clientes",{nombre:datos.cliente_nombre,telefono:datos.cliente_telefono,email:datos.cliente_email,motivo_consulta:datos.motivo_consulta,terapeuta_id:datos.terapeuta_id}).catch(()=>null);
-          setClientes(cs=>[...cs, cli?.[0]||{id:"c"+Date.now(),nombre:datos.cliente_nombre,telefono:datos.cliente_telefono,email:datos.cliente_email,motivo_consulta:datos.motivo_consulta,terapeuta_id:datos.terapeuta_id}]);
+          try {
+            const resC = await dbInsert("clientes",{nombre:datos.cliente_nombre,telefono:datos.cliente_telefono||"",email:datos.cliente_email||"",motivo_consulta:datos.motivo_consulta||"",terapeuta_id:datos.terapeuta_id});
+            const cli = Array.isArray(resC) ? resC[0] : resC;
+            if(cli?.id) setClientes(cs=>[...cs, cli]);
+          } catch(ec){ console.warn("Cliente no guardado en DB:", ec.message); }
         }
       } else {
-        await actualizarSesion(datos.id, datos).catch(()=>null);
+        await actualizarSesion(datos.id, datos);
         setSesiones(ss=>ss.map(s=>s.id===datos.id?{...s,...datos}:s));
       }
-    } catch(e){ console.error(e); }
-    setModalSes(null); setEditando(null); setSesVista(null);
+      setModalSes(null); setEditando(null); setSesVista(null);
+    } catch(e){
+      alert("Error al guardar sesión: " + e.message);
+    }
   }
 
   async function cambiarEstado(id, estado){
-    await actualizarSesion(id, {estado}).catch(()=>null);
-    setSesiones(ss=>ss.map(s=>s.id===id?{...s,estado}:s));
+    try {
+      await actualizarSesion(id, {estado});
+      setSesiones(ss=>ss.map(s=>s.id===id?{...s,estado}:s));
+    } catch(e){ alert("Error al cambiar estado: " + e.message); }
   }
 
   async function eliminarSesion(id){
     if(!window.confirm("¿Eliminar esta sesion? Esta acción no se puede deshacer.")) return;
-    await dbDelete("sesiones", id).catch(()=>null);
-    setSesiones(ss=>ss.filter(s=>s.id!==id));
-    setSesVista(null);
+    try {
+      await dbDelete("sesiones", id);
+      setSesiones(ss=>ss.filter(s=>s.id!==id));
+      setSesVista(null);
+    } catch(e){ alert("Error al eliminar sesión: " + e.message); }
   }
 
   async function handleLogout(){

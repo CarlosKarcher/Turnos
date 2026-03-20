@@ -189,7 +189,7 @@ export async function dbDelete(tabla, id) {
 
 // Obtener perfil del usuario logueado (de la tabla "terapeutas" o "usuarios")
 export async function getPerfilUsuario(userId) {
-  const data = await dbSelect("terapeutas", `?id=eq.${userId}`);
+  const data = await dbSelect("terapeutas", `?auth_user_id=eq.${userId}`);
   return data?.[0] || null;
 }
 

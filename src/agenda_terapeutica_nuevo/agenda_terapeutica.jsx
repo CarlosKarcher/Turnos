@@ -842,7 +842,7 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
       edad: form.edad!==""? parseInt(form.edad,10) : null,
       fecha_nacimiento: form.fecha_nacimiento||null,
     };
-    await onGuardar(cliente.id, datos);
+    await onGuardar(cliente.id || null, datos);
     setGuardando(false);
     onClose();
   }
@@ -853,7 +853,7 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal" style={{maxWidth:500}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <h2 className="modal-title" style={{marginBottom:0}}>Editar cliente</h2>
+          <h2 className="modal-title" style={{marginBottom:0}}>{cliente.id ? "Editar cliente" : "Nuevo cliente"}</h2>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>x</button>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:"6px 8px",alignItems:"end"}}>
@@ -923,11 +923,15 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
 // ══════════════════════════════════════════════════════════
 //  LISTA CLIENTES
 // ══════════════════════════════════════════════════════════
-function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas, usuarioActual }) {
+function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas, usuarioActual, altaClienteTrigger }) {
   const [busqueda,setBusqueda]=useState("");
   const [filtroTer,setFiltroTer]=useState("todos");
   const [sel,setSel]=useState(null);
   const [editando,setEditando]=useState(null);
+
+  useEffect(()=>{
+    if(altaClienteTrigger>0) setEditando({_nuevo:true});
+  },[altaClienteTrigger]);
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terMap=Object.fromEntries((terapeutas||[]).map(t=>[t.id,t]));
   const esAdmin=usuarioActual?.rol==="admin";
@@ -942,11 +946,20 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
   ):[];
 
   async function guardarCliente(id, datos){
-    try {
-    await dbUpdate("clientes", id, {...datos, updated_at: new Date().toISOString()});
-    } catch(e){ alert("Error al guardar cliente: " + e.message); throw e; }
-    setClientes(cs=>cs.map(c=>c.id===id?{...c,...datos}:c));
-    setSel(prev=>prev?.id===id?{...prev,...datos}:prev);
+    if(!id){
+      // NUEVO cliente
+      try {
+        const nuevo = await dbInsert("clientes", {...datos, terapeuta_id: usuarioActual.id, created_at: new Date().toISOString()});
+        setClientes(cs=>[...cs, nuevo]);
+      } catch(e){ alert("Error al guardar cliente: " + e.message); throw e; }
+    } else {
+      // EDITAR cliente existente
+      try {
+        await dbUpdate("clientes", id, {...datos, updated_at: new Date().toISOString()});
+      } catch(e){ alert("Error al guardar cliente: " + e.message); throw e; }
+      setClientes(cs=>cs.map(c=>c.id===id?{...c,...datos}:c));
+      setSel(prev=>prev?.id===id?{...prev,...datos}:prev);
+    }
   }
 
   const GENERO={F:"Femenino",M:"Masculino"};
@@ -1637,6 +1650,7 @@ export default function AgendaTerapeutica() {
   const [modalSes,      setModalSes]      = useState(null);
   const [sesVista,  setSesVista]  = useState(null);
   const [editando,  setEditando]  = useState(null);
+  const [altaClienteTrigger, setAltaClienteTrigger] = useState(0);
   const [cargando,  setCargando]  = useState(true);  // carga inicial
 
   // ── Restaurar sesión al montar ───────────────────────
@@ -1824,13 +1838,16 @@ export default function AgendaTerapeutica() {
       <main className="main">
         <div className="page-header">
           <h1 className="page-title">{titles[vista]||vista}</h1>
-          {vista!=="admin" && <button className="btn btn-primary" onClick={()=>setModalSes({})}>+ Nueva sesion</button>}
+          {vista==="clientes"
+            ? <button className="btn btn-primary" onClick={()=>setAltaClienteTrigger(n=>n+1)}>+ Alta Cliente</button>
+            : vista!=="admin" && <button className="btn btn-primary" onClick={()=>setModalSes({})}>+ Nueva sesion</button>
+          }
         </div>
 
         {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
         {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} onVer={setSesVista} onCambiarEstado={cambiarEstado} onEliminar={eliminarSesion} />}
-        {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
+        {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} altaClienteTrigger={altaClienteTrigger} />}
         {vista==="admin" && esAdminViendo && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>
 

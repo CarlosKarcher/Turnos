@@ -1074,16 +1074,15 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
         const actualizado = Array.isArray(res) ? res[0] : res;
         setUsuarios(us=>us.map(u=>u.id===editando.id?{...u,...(actualizado||datos)}:u));
       } else {
-        // Crear usuario en Supabase Auth con clave "1234"
-        try {
-          await crearUsuarioAuth(form.email, "1234");
-        } catch(eAuth) {
-          // Si ya existe el usuario en Auth, continuar igual
-          if (!eAuth.message?.includes("already")) throw new Error("No se pudo crear el acceso al sistema: " + eAuth.message);
-        }
         const res = await dbInsert("terapeutas", datos);
         const nuevo = Array.isArray(res) ? res[0] : res;
-        if(!nuevo?.id){ alert("Error: no se pudo guardar el terapeuta en la base de datos. Verificá tu sesión."); return; }
+        if(!nuevo?.id){ alert("Error: no se pudo guardar el terapeuta en la base de datos."); return; }
+        // Crear usuario Auth con clave "1234" y confirmar via RPC
+        try {
+          await crearUsuarioAuth(form.email, "1234", nuevo.id);
+        } catch(eAuth) {
+          console.warn("Auth no creado:", eAuth.message);
+        }
         setUsuarios(us=>[...us, nuevo]);
       }
       setModal(false);

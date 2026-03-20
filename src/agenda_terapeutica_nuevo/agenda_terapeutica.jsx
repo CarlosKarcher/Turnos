@@ -1671,7 +1671,7 @@ export default function AgendaTerapeutica() {
   async function guardarSesion(datos){
     const esNueva=!sesiones.find(s=>s.id===datos.id);
     // Eliminar campos del formulario que no existen en la tabla sesiones de la BD
-    const { duracion_minutos, fecha, hora, tel_area, tel_num, ...dbDatos } = datos;
+    const { duracion_minutos, fecha, hora, tel_area, tel_num, tel_prefijo, ...dbDatos } = datos;
     try {
       if(esNueva){
         const resS = await crearSesion(dbDatos);

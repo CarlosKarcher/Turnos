@@ -625,7 +625,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
             {dias.map((d,di)=>{
               const ss=getSes(d,h);
               return (
-                <div key={`${h}${di}`} className="t-slot" onClick={()=>onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`)}>
+                <div key={`${h}${di}`} className="t-slot" onClick={()=>{ if(d<hoy) return; onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`); }}>
                   {ss.map(s=>{
                     const sv=servMap[s.servicio_id];
                     return (

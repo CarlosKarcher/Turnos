@@ -998,7 +998,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
   const [editando,setEditando]=useState(null);
   const [form,setForm]=useState({nombre:"",email:"",password:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-  const terapeutas=usuarios.filter(u=>u.rol==="terapeuta");
+  const terapeutas=usuarios.filter(u=>u.rol==="terapeuta" || u.es_terapeuta===true);
 
   function abrir(u=null){
     setEditando(u);

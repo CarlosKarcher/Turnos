@@ -843,73 +843,69 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
     onClose();
   }
 
+  const G = ({children,col})=><div className="form-group" style={{marginBottom:6,gridColumn:col||""}}>{children}</div>;
+  const L = ({t})=><label className="form-label" style={{fontSize:10,marginBottom:2}}>{t}</label>;
   return (
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div className="modal" style={{maxWidth:520}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+      <div className="modal" style={{maxWidth:500}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <h2 className="modal-title" style={{marginBottom:0}}>Editar cliente</h2>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>x</button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          {/* Nombre + Género en la misma fila */}
-          <div className="form-group" style={{gridColumn:"1/-1"}}>
-            <label className="form-label">Nombre y Apellido *</label>
-            <div style={{display:"flex",gap:8}}>
-              <input className="form-input" style={{flex:1}} maxLength={25} value={form.nombre} onChange={e=>set("nombre",e.target.value)} />
-              <select className="form-input" style={{width:130,flexShrink:0}} value={form.genero} onChange={e=>set("genero",e.target.value)}>
-                <option value="">Género</option>
-                <option value="F">Femenino</option>
-                <option value="M">Masculino</option>
-              </select>
-            </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:"6px 8px",alignItems:"end"}}>
+          {/* Nombre (col 1-2) + Género (col 3) */}
+          <div className="form-group" style={{marginBottom:6,gridColumn:"1/3"}}>
+            <L t="Nombre y Apellido *"/>
+            <input className="form-input" style={{padding:"7px 10px"}} maxLength={25} value={form.nombre} onChange={e=>set("nombre",e.target.value)} />
           </div>
-          {/* Teléfono */}
-          <div className="form-group">
-            <label className="form-label">Teléfono</label>
-            <div style={{display:"flex",alignItems:"center",gap:0}}>
-              <input className="form-input" style={{borderRadius:"10px 0 0 10px",width:62,textAlign:"center",borderRight:"none",padding:"10px 6px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} />
-              <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} value={form.telefono} onChange={e=>set("telefono",e.target.value)} />
-            </div>
-          </div>
-          {/* Email */}
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <input className="form-input" type="email" value={form.email} onChange={e=>set("email",e.target.value)} />
-          </div>
-          {/* Edad + Fecha nacimiento */}
-          <div className="form-group">
-            <label className="form-label">Edad</label>
-            <input className="form-input" type="number" min="0" max="120" value={form.edad} onChange={e=>set("edad",e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Fecha de Nacimiento</label>
-            <input className="form-input" type="date" value={form.fecha_nacimiento} onChange={e=>set("fecha_nacimiento",e.target.value)} />
-          </div>
-          {/* Residencia + Origen */}
-          <div className="form-group">
-            <label className="form-label">Residencia</label>
-            <input className="form-input" value={form.lugar_residencia} onChange={e=>set("lugar_residencia",e.target.value)} placeholder="Ciudad, Provincia" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Origen</label>
-            <input className="form-input" value={form.lugar_origen} onChange={e=>set("lugar_origen",e.target.value)} placeholder="Ciudad, País" />
-          </div>
-          {/* Motivo */}
-          <div className="form-group" style={{gridColumn:"1/-1"}}>
-            <label className="form-label">Tema de la Consulta</label>
-            <textarea className="form-input" rows={2} value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} style={{resize:"vertical"}} />
-          </div>
-          {/* Emociones + Notas lado a lado */}
-          <div className="form-group">
-            <label className="form-label">Emociones Actuales</label>
-            <textarea className="form-input" rows={2} value={form.emociones_actuales} onChange={e=>set("emociones_actuales",e.target.value)} style={{resize:"vertical"}} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Notas adicionales</label>
-            <textarea className="form-input" rows={2} value={form.notas} onChange={e=>set("notas",e.target.value)} style={{resize:"vertical"}} />
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Género"/>
+            <select className="form-input" style={{padding:"7px 6px"}} value={form.genero} onChange={e=>set("genero",e.target.value)}>
+              <option value="">—</option>
+              <option value="F">Femenino</option>
+              <option value="M">Masculino</option>
+            </select>
           </div>
         </div>
-        <div className="form-actions">
+        <div style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr",gap:"6px 8px",alignItems:"end"}}>
+          {/* Prefijo | Teléfono | Email */}
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Cód"/>
+            <input className="form-input" style={{width:58,textAlign:"center",padding:"7px 6px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} />
+          </div>
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Teléfono"/>
+            <input className="form-input" style={{padding:"7px 10px"}} value={form.telefono} onChange={e=>set("telefono",e.target.value)} />
+          </div>
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Email"/>
+            <input className="form-input" style={{padding:"7px 10px"}} type="email" value={form.email} onChange={e=>set("email",e.target.value)} />
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"60px 1fr 1fr 1fr",gap:"6px 8px",alignItems:"end"}}>
+          {/* Edad | Fecha | Residencia | Origen */}
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Edad"/>
+            <input className="form-input" type="number" min="0" max="120" maxLength={3} style={{padding:"7px 6px",textAlign:"center"}} value={form.edad} onChange={e=>set("edad",e.target.value)} />
+          </div>
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Nacimiento"/>
+            <input className="form-input" type="date" style={{padding:"7px 8px",fontSize:12}} value={form.fecha_nacimiento} onChange={e=>set("fecha_nacimiento",e.target.value)} />
+          </div>
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Residencia"/>
+            <input className="form-input" style={{padding:"7px 10px"}} value={form.lugar_residencia} onChange={e=>set("lugar_residencia",e.target.value)} />
+          </div>
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Origen"/>
+            <input className="form-input" style={{padding:"7px 10px"}} value={form.lugar_origen} onChange={e=>set("lugar_origen",e.target.value)} />
+          </div>
+        </div>
+        <div className="form-group" style={{marginBottom:6}}>
+          <L t="Tema de la Consulta"/>
+          <textarea className="form-input" rows={2} style={{padding:"7px 10px",resize:"vertical"}} value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} />
+        </div>
+        <div className="form-actions" style={{marginTop:10}}>
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" onClick={guardar} disabled={guardando}>{guardando?"Guardando...":"Guardar cambios"}</button>
         </div>

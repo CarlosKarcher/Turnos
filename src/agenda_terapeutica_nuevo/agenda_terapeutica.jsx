@@ -897,9 +897,15 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
             <input className="form-input" style={{padding:"7px 10px"}} value={form.lugar_residencia} onChange={e=>set("lugar_residencia",e.target.value)} />
           </div>
         </div>
-        <div className="form-group" style={{marginBottom:6}}>
-          <L t="Tema de la Consulta"/>
-          <textarea className="form-input" rows={2} style={{padding:"7px 10px",resize:"vertical"}} value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} />
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 8px"}}>
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Tema de la Consulta"/>
+            <textarea className="form-input" rows={2} style={{padding:"7px 10px",resize:"vertical"}} value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} />
+          </div>
+          <div className="form-group" style={{marginBottom:6}}>
+            <L t="Notas"/>
+            <textarea className="form-input" rows={2} style={{padding:"7px 10px",resize:"vertical"}} value={form.notas} onChange={e=>set("notas",e.target.value)} />
+          </div>
         </div>
         <div className="form-actions" style={{marginTop:10}}>
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>

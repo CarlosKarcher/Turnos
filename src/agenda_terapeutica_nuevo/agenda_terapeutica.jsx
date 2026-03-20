@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   authLogin, authLogout, authRestoreSession, authCambiarPassword,
   getSesiones, crearSesion, actualizarSesion,
-  getServicios, getTerapeutas, getClientes, getPerfilUsuario,
+  getServicios, getTerapeutas, getClientes, getEspecialidades, getPerfilUsuario,
   dbSelect, dbInsert, dbUpdate, dbDelete
 } from "../supabase.js";
 
@@ -991,7 +991,7 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
 // ══════════════════════════════════════════════════════════
 //  ADMIN: TERAPEUTAS
 // ══════════════════════════════════════════════════════════
-function AdminTerapeutas({ usuarios, setUsuarios, sesiones }) {
+function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
   const [modal,setModal]=useState(false);
   const [editando,setEditando]=useState(null);
   const [form,setForm]=useState({nombre:"",email:"",password:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
@@ -1103,8 +1103,27 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones }) {
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Especialidades (separadas por coma)</label>
-              <input className="form-input" placeholder="Psicologia, Coaching, Biodecodificacion" value={form.especialidades} onChange={e=>set("especialidades",e.target.value)} />
+              <label className="form-label">Especialidades</label>
+              <div style={{border:"1px solid var(--border)",borderRadius:10,padding:"10px 14px",display:"flex",flexWrap:"wrap",gap:8,maxHeight:160,overflowY:"auto"}}>
+                {(especialidades||[]).filter(e=>e.activo).map(e=>{
+                  const seleccionadas=(form.especialidades||"").split(",").map(s=>s.trim()).filter(Boolean);
+                  const marcado=seleccionadas.includes(e.nombre);
+                  function toggle(){
+                    const nueva=marcado
+                      ? seleccionadas.filter(s=>s!==e.nombre)
+                      : [...seleccionadas, e.nombre];
+                    set("especialidades", nueva.join(", "));
+                  }
+                  return (
+                    <label key={e.id} style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",padding:"4px 10px",borderRadius:20,background:marcado?"var(--accent)22":"var(--surface2)",border:`1px solid ${marcado?"var(--accent)":"var(--border)"}`,fontSize:13,userSelect:"none"}}>
+                      <input type="checkbox" checked={marcado} onChange={toggle} style={{display:"none"}} />
+                      {marcado ? "✓ " : ""}{e.nombre}
+                    </label>
+                  );
+                })}
+                {(especialidades||[]).filter(e=>e.activo).length===0 && <span style={{fontSize:13,color:"var(--text2)"}}>No hay especialidades cargadas. Agregá desde el tab Especialidades.</span>}
+              </div>
+              {form.especialidades && <div style={{fontSize:11,color:"var(--text2)",marginTop:4}}>Seleccionadas: {form.especialidades}</div>}
             </div>
             <div className="form-group">
               <label className="form-label">Descripcion / bio</label>
@@ -1396,21 +1415,118 @@ function AdminSistema() {
 }
 
 // ══════════════════════════════════════════════════════════
+//  ADMIN: ESPECIALIDADES
+// ══════════════════════════════════════════════════════════
+function AdminEspecialidades({ especialidades, setEspecialidades }) {
+  const [modal,setModal]=useState(false);
+  const [editando,setEditando]=useState(null);
+  const [form,setForm]=useState({nombre:"",descripcion:"",activo:true});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+
+  function abrir(e=null){
+    setEditando(e);
+    setForm(e?{nombre:e.nombre,descripcion:e.descripcion||"",activo:e.activo}:{nombre:"",descripcion:"",activo:true});
+    setModal(true);
+  }
+
+  async function guardar(){
+    if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
+    if(editando){
+      await dbUpdate("especialidades", editando.id, form);
+      setEspecialidades(es=>es.map(e=>e.id===editando.id?{...e,...form}:e));
+    } else {
+      const nueva = await dbInsert("especialidades", form);
+      setEspecialidades(es=>[...es, nueva?.[0]||{...form,id:"esp"+Date.now()}]);
+    }
+    setModal(false);
+  }
+
+  async function toggleActivo(e){
+    await dbUpdate("especialidades", e.id, {activo:!e.activo});
+    setEspecialidades(es=>es.map(x=>x.id===e.id?{...x,activo:!x.activo}:x));
+  }
+
+  async function eliminar(e){
+    if(!window.confirm(`¿Eliminar "${e.nombre}"?`)) return;
+    await dbDelete("especialidades", e.id);
+    setEspecialidades(es=>es.filter(x=>x.id!==e.id));
+  }
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:20}}>
+        <button className="btn btn-primary" onClick={()=>abrir()}>+ Nueva especialidad</button>
+      </div>
+      <div className="card" style={{padding:0}}>
+        <table>
+          <thead><tr><th>Especialidad</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody>
+            {especialidades.map(e=>(
+              <tr key={e.id}>
+                <td><strong>{e.nombre}</strong></td>
+                <td style={{fontSize:13,color:"var(--text2)"}}>{e.descripcion||"—"}</td>
+                <td><span className={`badge ${e.activo?"badge-confirmado":"badge-cancelado"}`}>{e.activo?"Activa":"Inactiva"}</span></td>
+                <td>
+                  <div style={{display:"flex",gap:6}}>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>abrir(e)}>Editar</button>
+                    <button className={`btn btn-sm ${e.activo?"btn-danger":"btn-success"}`} onClick={()=>toggleActivo(e)}>{e.activo?"Desactivar":"Activar"}</button>
+                    <button className="btn btn-danger btn-sm" onClick={()=>eliminar(e)}>Borrar</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {especialidades.length===0 && <tr><td colSpan={4} style={{textAlign:"center",color:"var(--text2)",padding:20}}>Sin especialidades cargadas</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {modal && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
+          <div className="modal" style={{maxWidth:480}}>
+            <h2 className="modal-title">{editando?"Editar especialidad":"Nueva especialidad"}</h2>
+            <div className="form-group">
+              <label className="form-label">Nombre *</label>
+              <input className="form-input" value={form.nombre} onChange={e=>set("nombre",e.target.value)} placeholder="Ej: Psicología, Coaching..." />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Descripción</label>
+              <textarea className="form-textarea" rows={2} value={form.descripcion} onChange={e=>set("descripcion",e.target.value)} placeholder="Descripción breve..." style={{resize:"vertical"}} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Estado</label>
+              <select className="form-select" value={form.activo?"activo":"inactivo"} onChange={e=>set("activo",e.target.value==="activo")}>
+                <option value="activo">Activa</option>
+                <option value="inactivo">Inactiva</option>
+              </select>
+            </div>
+            <div className="form-actions">
+              <button className="btn btn-ghost" onClick={()=>setModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={guardar}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
 //  PANEL ADMIN
 // ══════════════════════════════════════════════════════════
-function PanelAdmin({ usuarios, setUsuarios, servicios, setServicios, sesiones, clientes }) {
+function PanelAdmin({ usuarios, setUsuarios, servicios, setServicios, sesiones, clientes, especialidades, setEspecialidades }) {
   const [tab,setTab]=useState("terapeutas");
   return (
     <div>
       <div className="admin-tabs">
-        {[["terapeutas","Terapeutas"],["servicios","Servicios"],["reportes","Reportes"],["sistema","Sistema"]].map(([k,l])=>(
+        {[["terapeutas","Terapeutas"],["servicios","Servicios"],["especialidades","Especialidades"],["reportes","Reportes"],["sistema","Sistema"]].map(([k,l])=>(
           <div key={k} className={`admin-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</div>
         ))}
       </div>
-      {tab==="terapeutas" && <AdminTerapeutas usuarios={usuarios} setUsuarios={setUsuarios} sesiones={sesiones} />}
-      {tab==="servicios"  && <AdminServicios  servicios={servicios} setServicios={setServicios} />}
-      {tab==="reportes"   && <AdminReportes   sesiones={sesiones} usuarios={usuarios} servicios={servicios} clientes={clientes} />}
-      {tab==="sistema"    && <AdminSistema />}
+      {tab==="terapeutas"    && <AdminTerapeutas    usuarios={usuarios} setUsuarios={setUsuarios} sesiones={sesiones} especialidades={especialidades} />}
+      {tab==="servicios"     && <AdminServicios     servicios={servicios} setServicios={setServicios} />}
+      {tab==="especialidades"&& <AdminEspecialidades especialidades={especialidades} setEspecialidades={setEspecialidades} />}
+      {tab==="reportes"      && <AdminReportes      sesiones={sesiones} usuarios={usuarios} servicios={servicios} clientes={clientes} />}
+      {tab==="sistema"       && <AdminSistema />}
     </div>
   );
 }
@@ -1424,8 +1540,9 @@ export default function AgendaTerapeutica() {
   const [usuarios,  setUsuarios]  = useState(USUARIOS_MOCK);   // se carga de Supabase
   const [sesiones,  setSesiones]  = useState([]);
   const [clientes,  setClientes]  = useState([]);
-  const [servicios, setServicios] = useState(SERVICIOS_MOCK);  // se carga de Supabase
-  const [modalSes,  setModalSes]  = useState(null);
+  const [servicios,     setServicios]     = useState(SERVICIOS_MOCK);  // se carga de Supabase
+  const [especialidades,setEspecialidades]= useState([]);
+  const [modalSes,      setModalSes]      = useState(null);
   const [sesVista,  setSesVista]  = useState(null);
   const [editando,  setEditando]  = useState(null);
   const [cargando,  setCargando]  = useState(true);  // carga inicial
@@ -1450,11 +1567,12 @@ export default function AgendaTerapeutica() {
   // ── Cargar datos desde Supabase ───────────────────────
   async function cargarDatos(u) {
     try {
-      const [srvs, ters, sess, clis] = await Promise.all([
+      const [srvs, ters, sess, clis, esps] = await Promise.all([
         getServicios(),
         getTerapeutas(),
         getSesiones(u.id, u.rol),
         getClientes(u.id, u.rol),
+        getEspecialidades(),
       ]);
       if (srvs?.length) setServicios(srvs);
       if (ters?.length) setUsuarios(prev => {
@@ -1463,6 +1581,7 @@ export default function AgendaTerapeutica() {
       });
       if (sess) setSesiones(sess);
       if (clis) setClientes(clis);
+      if (esps) setEspecialidades(esps);
     } catch(e){
       console.warn("Usando datos locales (Supabase no configurado):", e.message);
       // Fallback a datos mock si Supabase no está configurado aún
@@ -1586,7 +1705,7 @@ export default function AgendaTerapeutica() {
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
         {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} onVer={setSesVista} onCambiarEstado={cambiarEstado} />}
         {vista==="clientes"   && <ListaClientes clientes={clientes} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={usuario} />}
-        {vista==="admin" && usuario.rol==="admin" && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
+        {vista==="admin" && usuario.rol==="admin" && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} especialidades={especialidades} setEspecialidades={setEspecialidades} />}
       </main>
 
       {(modalSes!==null||editando!==null) && (

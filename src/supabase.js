@@ -217,6 +217,10 @@ export async function getTerapeutas() {
   return dbSelect("terapeutas", "?activo=eq.true&order=nombre.asc");
 }
 
+export async function getEspecialidades() {
+  return dbSelect("especialidades", "?activo=eq.true&order=nombre.asc");
+}
+
 export async function getClientes(terapeutaId, rol) {
   if (rol === "admin") return dbSelect("clientes", "?order=nombre.asc");
   return dbSelect("clientes", `?terapeuta_id=eq.${terapeutaId}&order=nombre.asc`);

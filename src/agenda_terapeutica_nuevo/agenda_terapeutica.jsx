@@ -293,11 +293,20 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   const esEdicion = !!(sesion?.id);
   const fechaObj  = sesion?.fecha_inicio ? new Date(sesion.fecha_inicio) : new Date();
   const finObj    = sesion?.fecha_fin    ? new Date(sesion.fecha_fin)    : null;
-  const durIni    = esEdicion ? Math.round((finObj-fechaObj)/60000) : (servicios[0]?.duracion_minutos||60);
+
+  // Calcular servicio inicial coherente con las especialidades del terapeuta
+  const initTerapeutaId = sesion?.terapeuta_id || (usuarioActual.rol==="terapeuta" ? usuarioActual.id : terapeutas[0]?.id||"");
+  const initTerapeuta   = terapeutas.find(t=>t.id===initTerapeutaId);
+  const initEsp         = initTerapeuta?.especialidades||[];
+  const initServicios   = servicios.filter(s=>s.activo&&(initEsp.length===0||initEsp.includes(s.nombre)));
+  const initServicio    = sesion?.servicio_id
+    ? servicios.find(s=>s.id===sesion.servicio_id)
+    : initServicios[0];
+  const durIni = esEdicion ? Math.round((finObj-fechaObj)/60000) : (initServicio?.duracion_minutos||60);
 
   const [form,setForm] = useState({
-    terapeuta_id:    sesion?.terapeuta_id || (usuarioActual.rol==="terapeuta"?usuarioActual.id:terapeutas[0]?.id||""),
-    servicio_id:     sesion?.servicio_id  || servicios[0]?.id||"",
+    terapeuta_id:    initTerapeutaId,
+    servicio_id:     initServicio?.id||"",
     // Usa fecha/hora del slot clicado si vienen del calendario, sino fecha actual
     fecha:           sesion?.fecha || fechaObj.toISOString().split("T")[0],
     hora:            sesion?.hora  || `${String(fechaObj.getHours()).padStart(2,"0")}:${String(fechaObj.getMinutes()).padStart(2,"0")}`,

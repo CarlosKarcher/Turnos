@@ -460,7 +460,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
                 <label className="form-label">Teléfono</label>
                 <div style={{display:"flex",alignItems:"center",gap:0}}>
                   <input className="form-input" style={{borderRadius:"10px 0 0 10px",width:68,textAlign:"center",borderRight:"none",padding:"10px 8px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} placeholder="+54" />
-                  <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} placeholder="351 401 7320" value={form.cliente_telefono} onChange={e=>set("cliente_telefono",e.target.value)} />
+                  <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} value={form.cliente_telefono} onChange={e=>set("cliente_telefono",e.target.value)} />
                 </div>
               </div>
               <div className="form-group">

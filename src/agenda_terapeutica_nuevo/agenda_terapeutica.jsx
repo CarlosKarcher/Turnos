@@ -1551,10 +1551,8 @@ export default function AgendaTerapeutica() {
         getClientes(u.id, u.rol),
       ]);
       if (srvs?.length) setServicios(srvs);
-      if (ters?.length) setUsuarios(prev => {
-        const admins = prev.filter(x=>x.rol==="admin");
-        return [...admins, ...ters];
-      });
+      // Reemplazar directamente con los datos de BD (evita duplicados del mock inicial)
+      if (ters?.length) setUsuarios(ters);
       if (sess) setSesiones(sess);
       if (clis) setClientes(clis);
     } catch(e){

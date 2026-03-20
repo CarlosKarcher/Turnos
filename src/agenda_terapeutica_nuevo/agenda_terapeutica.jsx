@@ -484,7 +484,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 // ══════════════════════════════════════════════════════════
 //  MODAL DETALLE
 // ══════════════════════════════════════════════════════════
-function ModalDetalle({ sesion, terapeutas, servicios, onClose, onEditar, onCompletar, onCancelar }) {
+function ModalDetalle({ sesion, terapeutas, servicios, onClose, onEditar, onCompletar, onCancelar, onEliminar }) {
   const serv = servicios.find(s=>s.id===sesion.servicio_id);
   const ter  = terapeutas.find(t=>t.id===sesion.terapeuta_id);
   return (
@@ -540,6 +540,7 @@ function ModalDetalle({ sesion, terapeutas, servicios, onClose, onEditar, onComp
           {sesion.estado!=="completado" && sesion.estado!=="cancelado" && (
             <button className="btn btn-success" onClick={()=>onCompletar(sesion.id)}>Completada</button>
           )}
+          <button className="btn btn-danger btn-sm" onClick={()=>onEliminar(sesion.id)}>Eliminar</button>
         </div>
       </div>
     </div>
@@ -868,6 +869,12 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones }) {
     setUsuarios(us=>us.map(u=>u.id===t.id?{...u,activo:!u.activo}:u));
   }
 
+  async function eliminarTerapeuta(t){
+    if(!window.confirm(`¿Eliminar a "${t.nombre}"? Esta acción no se puede deshacer.`)) return;
+    await dbDelete("terapeutas", t.id);
+    setUsuarios(us=>us.filter(u=>u.id!==t.id));
+  }
+
   return (
     <div>
       <div style={{display:"flex",justifyContent:"flex-end",marginBottom:20}}>
@@ -908,6 +915,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones }) {
                 <button className={`btn btn-sm ${t.activo?"btn-danger":"btn-success"}`} onClick={()=>toggleActivo(t)}>
                   {t.activo?"Desactivar":"Activar"}
                 </button>
+                <button className="btn btn-danger btn-sm" onClick={()=>eliminarTerapeuta(t)}>Borrar</button>
               </div>
             </div>
           );
@@ -982,10 +990,20 @@ function AdminServicios({ servicios, setServicios }) {
     setModal(true);
   }
 
-  function guardar(){
-    if(editando){ setServicios(ss=>ss.map(s=>s.id===editando.id?{...s,...form}:s)); }
-    else { setServicios(ss=>[...ss,{...form,id:"srv"+Date.now()}]); }
+  async function guardar(){
+    if(editando){
+      await dbUpdate("servicios", editando.id, form);
+      setServicios(ss=>ss.map(s=>s.id===editando.id?{...s,...form}:s));
+    } else {
+      const nuevo = await dbInsert("servicios", form);
+      setServicios(ss=>[...ss, nuevo?.[0]||{...form,id:"srv"+Date.now()}]);
+    }
     setModal(false);
+  }
+
+  async function toggleServicio(s){
+    await dbUpdate("servicios", s.id, {activo:!s.activo});
+    setServicios(ss=>ss.map(x=>x.id===s.id?{...x,activo:!x.activo}:x));
   }
 
   async function eliminar(s){
@@ -1017,7 +1035,7 @@ function AdminServicios({ servicios, setServicios }) {
                 <td>
                   <div style={{display:"flex",gap:6}}>
                     <button className="btn btn-ghost btn-sm" onClick={()=>abrir(s)}>Editar</button>
-                    <button className={`btn btn-sm ${s.activo?"btn-danger":"btn-success"}`} onClick={()=>setServicios(ss=>ss.map(x=>x.id===s.id?{...x,activo:!x.activo}:x))}>
+                    <button className={`btn btn-sm ${s.activo?"btn-danger":"btn-success"}`} onClick={()=>toggleServicio(s)}>
                       {s.activo?"Desactivar":"Activar"}
                     </button>
                     <button className="btn btn-danger btn-sm" onClick={()=>eliminar(s)}>Borrar</button>
@@ -1329,6 +1347,13 @@ export default function AgendaTerapeutica() {
     setSesiones(ss=>ss.map(s=>s.id===id?{...s,estado}:s));
   }
 
+  async function eliminarSesion(id){
+    if(!window.confirm("¿Eliminar esta sesion? Esta acción no se puede deshacer.")) return;
+    await dbDelete("sesiones", id).catch(()=>null);
+    setSesiones(ss=>ss.filter(s=>s.id!==id));
+    setSesVista(null);
+  }
+
   async function handleLogout(){
     await authLogout();
     setUsuario(null); setSesiones([]); setClientes([]); setVista("dashboard");
@@ -1430,6 +1455,7 @@ export default function AgendaTerapeutica() {
           onEditar={()=>{setEditando(sesVista);setSesVista(null);}}
           onCompletar={id=>{cambiarEstado(id,"completado");setSesVista(null);}}
           onCancelar={id=>{cambiarEstado(id,"cancelado");setSesVista(null);}}
+          onEliminar={eliminarSesion}
         />
       )}
     </div></>

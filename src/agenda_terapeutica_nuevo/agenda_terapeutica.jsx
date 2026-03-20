@@ -1519,9 +1519,17 @@ function AdminReportes({ sesiones, usuarios, servicios }) {
 // ══════════════════════════════════════════════════════════
 //  ADMIN: SISTEMA
 // ══════════════════════════════════════════════════════════
+const CONFIG_DEFAULT = {nombre:"Sentir - Agenda Terapeutica",timezone:"America/Argentina/Buenos_Aires",horaInicio:8,horaFin:21,rec24h:true,rec2h:true};
 function AdminSistema() {
-  const [config,setConfig]=useState({nombre:"Agenda Terapeutica",timezone:"America/Argentina/Buenos_Aires",horaInicio:8,horaFin:21,rec24h:true,rec2h:true});
+  const saved = (() => { try { return JSON.parse(localStorage.getItem("sentir_config")||"{}"); } catch{ return {}; }})();
+  const [config,setConfig]=useState({...CONFIG_DEFAULT,...saved});
+  const [ok,setOk]=useState(false);
   const set=(k,v)=>setConfig(c=>({...c,[k]:v}));
+  function guardar(){
+    localStorage.setItem("sentir_config", JSON.stringify(config));
+    setOk(true);
+    setTimeout(()=>setOk(false),2500);
+  }
   return (
     <div style={{maxWidth:600}}>
       <div className="card">
@@ -1557,8 +1565,9 @@ function AdminSistema() {
             </div>
           </div>
         ))}
-        <div style={{marginTop:20}}>
-          <button className="btn btn-primary">Guardar configuracion</button>
+        <div style={{marginTop:20,display:"flex",alignItems:"center",gap:14}}>
+          <button className="btn btn-primary" onClick={guardar}>Guardar configuracion</button>
+          {ok && <span style={{color:"#4ade80",fontSize:13,fontWeight:600}}>✓ Guardado correctamente</span>}
         </div>
       </div>
     </div>

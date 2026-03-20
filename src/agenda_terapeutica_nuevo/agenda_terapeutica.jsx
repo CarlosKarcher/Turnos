@@ -1611,11 +1611,26 @@ export default function AgendaTerapeutica() {
         const sesConId = Array.isArray(resS) ? resS[0] : resS;
         if(!sesConId?.id){ alert("Error: la sesión no se guardó en la base de datos."); return; }
         setSesiones(ss=>[...ss, sesConId]);
-        if(dbDatos.cliente_nombre && !clientes.find(c=>c.nombre===dbDatos.cliente_nombre && c.terapeuta_id===dbDatos.terapeuta_id)){
+        if(dbDatos.cliente_nombre){
           try {
-            const resC = await dbInsert("clientes",{nombre:dbDatos.cliente_nombre,telefono:dbDatos.cliente_telefono||"",email:dbDatos.cliente_email||"",motivo_consulta:dbDatos.motivo_consulta||"",terapeuta_id:dbDatos.terapeuta_id});
-            const cli = Array.isArray(resC) ? resC[0] : resC;
-            if(cli?.id) setClientes(cs=>[...cs, cli]);
+            const cliExistente = clientes.find(c=>c.nombre===dbDatos.cliente_nombre && c.terapeuta_id===dbDatos.terapeuta_id);
+            const datosCliente = {
+              nombre: dbDatos.cliente_nombre,
+              telefono: dbDatos.cliente_telefono||"",
+              email: dbDatos.cliente_email||"",
+              motivo_consulta: dbDatos.motivo_consulta||"",
+              terapeuta_id: dbDatos.terapeuta_id
+            };
+            if(cliExistente){
+              // Actualizar datos del cliente existente con lo ingresado en la sesión
+              await dbUpdate("clientes", cliExistente.id, datosCliente);
+              setClientes(cs=>cs.map(c=>c.id===cliExistente.id?{...c,...datosCliente}:c));
+            } else {
+              // Crear nuevo cliente
+              const resC = await dbInsert("clientes", datosCliente);
+              const cli = Array.isArray(resC) ? resC[0] : resC;
+              if(cli?.id) setClientes(cs=>[...cs, cli]);
+            }
           } catch(ec){ console.warn("Cliente no guardado en DB:", ec.message); }
         }
       } else {

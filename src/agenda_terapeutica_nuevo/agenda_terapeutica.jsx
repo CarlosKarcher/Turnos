@@ -373,7 +373,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
             </div>
 
             <div className="form-group">
-              <label className="form-label">Especialidad</label>
+              <label className="form-label">Terapia</label>
               <div className="chips">
                 {servicios.filter(s=>s.activo).map(s=>(
                   <div key={s.id} className={`chip ${form.servicio_id===s.id?"sel":""}`}
@@ -638,7 +638,7 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
       <div className="card" style={{padding:0}}>
         <table>
           <thead><tr>
-            <th>Fecha / Hora</th><th>Cliente</th><th>Especialidad</th>
+            <th>Fecha / Hora</th><th>Cliente</th><th>Terapia</th>
             {usuarioActual.rol==="admin" && <th>Terapeuta</th>}
             <th>Estado</th><th>Acciones</th>
           </tr></thead>
@@ -737,7 +737,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
           })}
         </div>
         <div className="card">
-          <div className="card-title">Especialidades mas solicitadas</div>
+          <div className="card-title">Terapias mas solicitadas</div>
           {servicios.map(sv=>{
             const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
             const max=Math.max(...servicios.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
@@ -1121,7 +1121,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
                     </label>
                   );
                 })}
-                {(especialidades||[]).filter(e=>e.activo).length===0 && <span style={{fontSize:13,color:"var(--text2)"}}>No hay especialidades. Agregá desde Admin → Especialidades.</span>}
+                {(especialidades||[]).filter(e=>e.activo).length===0 && <span style={{fontSize:13,color:"var(--text2)"}}>No hay terapias. Agregá desde Admin → Terapias.</span>}
               </div>
               {form.especialidades && <div style={{fontSize:11,color:"var(--text2)",marginTop:4}}>Seleccionadas: {form.especialidades}</div>}
             </div>
@@ -1190,7 +1190,7 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
   async function limpiarNoUsadas(){
     const noUsadas=servicios.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length===0);
     if(noUsadas.length===0){ alert("No hay especialidades sin usar."); return; }
-    if(!window.confirm(`¿Eliminar ${noUsadas.length} especialidad/es sin sesiones?`)) return;
+    if(!window.confirm(`¿Eliminar ${noUsadas.length} terapia/s sin sesiones?`)) return;
     for(const s of noUsadas){
       await dbDelete("servicios", s.id);
     }
@@ -1200,12 +1200,12 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
   return (
     <div>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
-        <button className="btn btn-ghost btn-sm" onClick={limpiarNoUsadas} style={{fontSize:12}}>🗑 Limpiar sin usar</button>
-        <button className="btn btn-primary" onClick={()=>abrir()}>+ Nueva especialidad</button>
+        <button className="btn btn-ghost btn-sm" onClick={limpiarNoUsadas} style={{fontSize:12}}>🗑 Limpiar terapias sin uso</button>
+        <button className="btn btn-primary" onClick={()=>abrir()}>+ Nueva terapia</button>
       </div>
       <div className="card" style={{padding:0}}>
         <table>
-          <thead><tr><th>Especialidad</th><th>Descripcion</th><th>Duracion</th><th>Sesiones</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Terapia</th><th>Descripcion</th><th>Duracion</th><th>Sesiones</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
             {servicios.map(s=>{
               const qty=(sesiones||[]).filter(x=>x.servicio_id===s.id).length;
@@ -1235,7 +1235,7 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
                     <button
                       className="btn btn-danger btn-sm"
                       onClick={()=>eliminar(s,qty)}
-                      title={qty>0?`Tiene ${qty} sesiones`:"Sin sesiones, se puede eliminar"}
+                      title={qty>0?`Tiene ${qty} sesiones`:"Sin sesiones, se puede eliminar la terapia"}
                       style={{opacity:qty>0?0.4:1}}
                     >Borrar</button>
                   </div>
@@ -1250,10 +1250,10 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
       {modal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
           <div className="modal">
-            <h2 className="modal-title">{editando?"Editar especialidad":"Nueva especialidad"}</h2>
+            <h2 className="modal-title">{editando?"Editar terapia":"Nueva terapia"}</h2>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Nombre de la especialidad</label>
+                <label className="form-label">Nombre de la terapia</label>
                 <input className="form-input" value={form.nombre} onChange={e=>set("nombre",e.target.value)} />
               </div>
               <div className="form-group">
@@ -1344,7 +1344,7 @@ function AdminReportes({ sesiones, usuarios, servicios }) {
           </table>
         </div>
         <div className="card">
-          <div className="card-title">Sesiones por especialidad</div>
+          <div className="card-title">Sesiones por terapia</div>
           {servicios.map(sv=>{
             const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
             const max=Math.max(...servicios.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
@@ -1364,7 +1364,7 @@ function AdminReportes({ sesiones, usuarios, servicios }) {
         <div className="card" style={{gridColumn:"1/-1"}}>
           <div className="card-title">Historial global</div>
           <table>
-            <thead><tr><th>Fecha</th><th>Cliente</th><th>Especialidad</th><th>Terapeuta</th><th>Estado</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Cliente</th><th>Terapia</th><th>Terapeuta</th><th>Estado</th></tr></thead>
             <tbody>
               {sesiones.sort((a,b)=>new Date(b.fecha_inicio)-new Date(a.fecha_inicio)).slice(0,12).map(s=>{
                 const sv=servMap[s.servicio_id];
@@ -1449,7 +1449,7 @@ function PanelAdmin({ usuarios, setUsuarios, servicios, setServicios, sesiones, 
   return (
     <div>
       <div className="admin-tabs">
-        {[["terapeutas","👥 Terapeutas"],["especialidades","🎯 Especialidades"],["reportes","📊 Reportes"],["sistema","⚙️ Sistema"]].map(([k,l])=>(
+        {[["terapeutas","👥 Terapeutas"],["especialidades","🎯 Terapias"],["reportes","📊 Reportes"],["sistema","⚙️ Sistema"]].map(([k,l])=>(
           <div key={k} className={`admin-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</div>
         ))}
       </div>

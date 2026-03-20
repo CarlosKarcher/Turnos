@@ -1628,6 +1628,7 @@ function CambiarClaveForm({ usuario, onCambiado }) {
 export default function AgendaTerapeutica() {
   const [usuario,   setUsuario]   = useState(null);
   const [vista,     setVista]     = useState("dashboard");
+  const [vistaComoTerapeuta, setVistaComoTerapeuta] = useState(false);
   const [usuarios,  setUsuarios]  = useState(USUARIOS_MOCK);   // se carga de Supabase
   const [sesiones,  setSesiones]  = useState([]);
   const [clientes,  setClientes]  = useState([]);
@@ -1675,9 +1676,10 @@ export default function AgendaTerapeutica() {
   }
 
   const terapeutas = usuarios.filter(u=>u.rol==="terapeuta" || u.es_terapeuta===true);
-  const sesionesFiltradas = usuario?.rol==="terapeuta"
-    ? sesiones.filter(s=>s.terapeuta_id===usuario.id)
-    : sesiones;
+  const esAdminViendo = usuario?.rol==="admin" && !vistaComoTerapeuta;
+  const sesionesFiltradas = esAdminViendo
+    ? sesiones
+    : sesiones.filter(s=>s.terapeuta_id===usuario?.id);
 
   async function guardarSesion(datos){
     const esNueva=!sesiones.find(s=>s.id===datos.id);
@@ -1771,7 +1773,7 @@ export default function AgendaTerapeutica() {
     {id:"sesiones",icon:"🗂️",label:"Mis Sesiones",sec:null},
     {id:"clientes",icon:"👥",label:"Mis Clientes",sec:"Gestion"},
   ];
-  const nav = usuario.rol==="admin" ? navAdmin : navTer;
+  const nav = esAdminViendo ? navAdmin : navTer;
 
   const titles={dashboard:"Dashboard",calendario:"Calendario",sesiones:"Sesiones",clientes:"Clientes",admin:"Administracion"};
 
@@ -1787,9 +1789,21 @@ export default function AgendaTerapeutica() {
           <div className="avatar" style={{width:36,height:36,fontSize:15,background:usuario.color+"33",color:usuario.color}}>{usuario.nombre?.[0]}</div>
           <div style={{flex:1,minWidth:0}}>
             <div className="sidebar-user-name">{usuario.nombre}</div>
-            <div className="sidebar-user-role">{usuario.rol}</div>
+            <div className="sidebar-user-role">{esAdminViendo ? "admin" : "terapeuta"}</div>
           </div>
         </div>
+        {usuario.rol==="admin" && (
+          <div style={{padding:"8px 16px",borderBottom:"1px solid var(--border)"}}>
+            <button
+              onClick={()=>{ setVistaComoTerapeuta(v=>!v); setVista("dashboard"); }}
+              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 12px",borderRadius:10,border:"1px solid var(--border)",background: vistaComoTerapeuta?"#6366f122":"transparent",cursor:"pointer",fontSize:12,color:vistaComoTerapeuta?"var(--accent2)":"var(--text2)",transition:"all .2s"}}>
+              <span>{vistaComoTerapeuta ? "👤 Vista Terapeuta" : "⚙️ Vista Admin"}</span>
+              <span style={{width:32,height:18,borderRadius:9,background:vistaComoTerapeuta?"var(--accent)":"var(--border)",position:"relative",display:"inline-block",transition:"background .2s"}}>
+                <span style={{position:"absolute",top:2,left:vistaComoTerapeuta?14:2,width:14,height:14,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
+              </span>
+            </button>
+          </div>
+        )}
         {nav.map((item,i)=>(
           <span key={i}>
             {item.sec && <div className="nav-section">{item.sec}</div>}
@@ -1812,11 +1826,11 @@ export default function AgendaTerapeutica() {
           {vista!=="admin" && <button className="btn btn-primary" onClick={()=>setModalSes({})}>+ Nueva sesion</button>}
         </div>
 
-        {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} />}
+        {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
-        {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} onVer={setSesVista} onCambiarEstado={cambiarEstado} />}
-        {vista==="clientes"   && <ListaClientes clientes={clientes} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={usuario} />}
-        {vista==="admin" && usuario.rol==="admin" && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
+        {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} onVer={setSesVista} onCambiarEstado={cambiarEstado} />}
+        {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
+        {vista==="admin" && esAdminViendo && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>
 
       {(modalSes!==null||editando!==null) && (

@@ -716,9 +716,15 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
 // ══════════════════════════════════════════════════════════
 function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual }) {
   const hoy=new Date(); hoy.setHours(0,0,0,0);
+  // Inicio de la semana actual (lunes)
+  const inicioSemana=new Date(hoy); inicioSemana.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
+  // Fin de la semana actual (domingo) + 14 días extras para próximas
+  const finSemana=new Date(inicioSemana); finSemana.setDate(inicioSemana.getDate()+6); finSemana.setHours(23,59,59,999);
   const fin14=new Date(hoy); fin14.setDate(hoy.getDate()+14);
   const sesHoy    =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime(); });
-  const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; });
+  // Esta semana: lunes a domingo de la semana actual (incluye días ya pasados)
+  const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=inicioSemana&&f<=finSemana&&s.estado!=="cancelado"; });
+  // Próximas: desde hoy hasta 14 días
   const proximas  =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; }).sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
   const completadas=sesiones.filter(s=>s.estado==="completado").length;
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
@@ -729,7 +735,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
       <div className="stats-grid">
         {[
           {label:"Sesiones hoy",val:sesHoy.length,    c:"var(--accent)"},
-          {label:"Próximos 14 días", val:sesSemana.length, c:"var(--accent2)"},
+          {label:"Esta semana",      val:sesSemana.length, c:"var(--accent2)"},
           {label:"Completadas", val:completadas,       c:"var(--success)"},
           {label:"Clientes",    val:clientes.length,   c:"var(--gold)"},
         ].map((s,i)=>(

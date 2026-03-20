@@ -850,11 +850,22 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones }) {
     setModal(true);
   }
 
-  function guardar(){
-    const datos={...form,especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),rol:"terapeuta"};
-    if(editando){ setUsuarios(us=>us.map(u=>u.id===editando.id?{...u,...datos}:u)); }
-    else { setUsuarios(us=>[...us,{...datos,id:"u"+Date.now()}]); }
+  async function guardar(){
+    const datos={...form,especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),rol:"terapeuta",es_terapeuta:true};
+    delete datos.password;
+    if(editando){
+      await dbUpdate("terapeutas", editando.id, datos);
+      setUsuarios(us=>us.map(u=>u.id===editando.id?{...u,...datos}:u));
+    } else {
+      const nuevo = await dbInsert("terapeutas", datos);
+      setUsuarios(us=>[...us, nuevo]);
+    }
     setModal(false);
+  }
+
+  async function toggleActivo(t){
+    await dbUpdate("terapeutas", t.id, {activo:!t.activo});
+    setUsuarios(us=>us.map(u=>u.id===t.id?{...u,activo:!u.activo}:u));
   }
 
   return (
@@ -894,7 +905,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones }) {
               </div>
               <div style={{display:"flex",gap:8}}>
                 <button className="btn btn-ghost btn-sm" style={{flex:1}} onClick={()=>abrir(t)}>Editar</button>
-                <button className={`btn btn-sm ${t.activo?"btn-danger":"btn-success"}`} onClick={()=>setUsuarios(us=>us.map(u=>u.id===t.id?{...u,activo:!u.activo}:u))}>
+                <button className={`btn btn-sm ${t.activo?"btn-danger":"btn-success"}`} onClick={()=>toggleActivo(t)}>
                   {t.activo?"Desactivar":"Activar"}
                 </button>
               </div>

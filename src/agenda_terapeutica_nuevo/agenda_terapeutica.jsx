@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  authLogin, authLogout, authRestoreSession, authCambiarPassword,
+  authLogin, authLogout, authRestoreSession, authCambiarPassword, crearUsuarioAuth,
   getSesiones, crearSesion, actualizarSesion,
   getServicios, getTerapeutas, getClientes, getPerfilUsuario,
   dbSelect, dbInsert, dbUpdate, dbDelete
@@ -275,11 +275,6 @@ function Login({ onLogin }) {
           </div>
         )}
 
-        <div style={{marginTop:24,padding:"14px",background:"var(--surface2)",borderRadius:10,fontSize:12,color:"var(--text2)"}}>
-          <strong style={{color:"var(--text)"}}>Configuracion requerida:</strong><br/>
-          Antes de usar el sistema, ejecuta el SQL en Supabase<br/>
-          y crea los usuarios en Authentication → Users
-        </div>
       </div>
     </div>
   );
@@ -1079,6 +1074,13 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
         const actualizado = Array.isArray(res) ? res[0] : res;
         setUsuarios(us=>us.map(u=>u.id===editando.id?{...u,...(actualizado||datos)}:u));
       } else {
+        // Crear usuario en Supabase Auth con clave "1234"
+        try {
+          await crearUsuarioAuth(form.email, "1234");
+        } catch(eAuth) {
+          // Si ya existe el usuario en Auth, continuar igual
+          if (!eAuth.message?.includes("already")) throw new Error("No se pudo crear el acceso al sistema: " + eAuth.message);
+        }
         const res = await dbInsert("terapeutas", datos);
         const nuevo = Array.isArray(res) ? res[0] : res;
         if(!nuevo?.id){ alert("Error: no se pudo guardar el terapeuta en la base de datos. Verificá tu sesión."); return; }

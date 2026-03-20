@@ -121,6 +121,22 @@ export async function authCambiarPassword(nuevaPassword) {
   return res.json();
 }
 
+// ── AUTH: Crear usuario vía Edge Function (solo admin) ───
+export async function crearUsuarioAuth(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/crear-usuario-auth`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${_sessionToken}`,
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || "No se pudo crear el usuario");
+  return data;
+}
+
 // ── AUTH: Registrar nuevo usuario (solo admin) ───────────
 export async function authRegistrar(email, password) {
   // Usamos el service_role_key para crear usuarios desde el admin

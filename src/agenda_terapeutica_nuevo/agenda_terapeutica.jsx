@@ -597,6 +597,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
   const hoy   = new Date(); hoy.setHours(0,0,0,0);
   const nav   = d=>setLunes(l=>{ const n=new Date(l); n.setDate(l.getDate()+d*7); return n; });
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
+  const terapMap=Object.fromEntries(terapeutas.map(t=>[t.id,t]));
 
   function getSes(dia,hora){
     return sesiones.filter(s=>{
@@ -627,13 +628,16 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
             <div key={`l${h}`} className="t-label">{h}:00</div>
             {dias.map((d,di)=>{
               const ss=getSes(d,h);
+              const primerColor = ss.length>0 ? (terapMap[ss[0].terapeuta_id]?.color||"#6366f1") : null;
+              const slotStyle = primerColor ? {background:primerColor+"22"} : {};
               return (
-                <div key={`${h}${di}`} className={`t-slot ${d<hoy?"pasado":"activo"}`} onClick={()=>{ if(d<hoy) return; onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`); }}>
+                <div key={`${h}${di}`} className={`t-slot ${d<hoy?"pasado":"activo"}`} style={slotStyle} onClick={()=>{ if(d<hoy) return; onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`); }}>
                   {ss.map(s=>{
+                    const tc=terapMap[s.terapeuta_id]?.color||"#6366f1";
                     const sv=servMap[s.servicio_id];
                     return (
                       <div key={s.id} className="ses-chip"
-                        style={{background:(sv?.color||"#6366f1")+"33",color:sv?.color||"#a5b4fc",borderLeft:`3px solid ${sv?.color||"#6366f1"}`}}
+                        style={{background:tc+"44",color:tc,borderLeft:`3px solid ${tc}`}}
                         onClick={e=>{e.stopPropagation();onVer(s);}}>
                         {s.cliente_nombre} - {sv?.nombre}
                       </div>

@@ -996,14 +996,16 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
 function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
   const [modal,setModal]=useState(false);
   const [editando,setEditando]=useState(null);
-  const [form,setForm]=useState({nombre:"",email:"",password:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
+  const [form,setForm]=useState({nombre:"",email:"",password_text:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
+  const [verPass,setVerPass]=useState(false);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const terapeutas=usuarios.filter(u=>u.rol==="terapeuta" || u.es_terapeuta===true);
 
   function abrir(u=null){
     setEditando(u);
-    setForm(u?{nombre:u.nombre,email:u.email,password:u.password,especialidades:(u.especialidades||[]).join(", "),color:u.color,descripcion:u.descripcion||"",activo:u.activo}
-               :{nombre:"",email:"",password:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
+    setVerPass(false);
+    setForm(u?{nombre:u.nombre,email:u.email,password_text:u.password_text||"",especialidades:(u.especialidades||[]).join(", "),color:u.color,descripcion:u.descripcion||"",activo:u.activo}
+               :{nombre:"",email:"",password_text:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
     setModal(true);
   }
 
@@ -1011,7 +1013,8 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
     if(!form.nombre.trim()||!form.email.trim()){ alert("Nombre y email son obligatorios."); return; }
     const datos={nombre:form.nombre,email:form.email,rol:"terapeuta",es_terapeuta:true,
       especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),
-      color:form.color,descripcion:form.descripcion,activo:form.activo};
+      color:form.color,descripcion:form.descripcion,activo:form.activo,
+      password_text:form.password_text||null};
     try {
       if(editando){
         const res = await dbUpdate("terapeutas", editando.id, datos);
@@ -1107,8 +1110,13 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Contrasena</label>
-                <input className="form-input" type="password" value={form.password} onChange={e=>set("password",e.target.value)} />
+                <label className="form-label">Contraseña</label>
+                <div style={{position:"relative"}}>
+                  <input className="form-input" type={verPass?"text":"password"} value={form.password_text} onChange={e=>set("password_text",e.target.value)} placeholder="Contraseña del terapeuta" style={{paddingRight:40}} />
+                  <button type="button" onClick={()=>setVerPass(v=>!v)} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:18,lineHeight:1}}>
+                    {verPass ? "🙈" : "👁"}
+                  </button>
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Estado</label>

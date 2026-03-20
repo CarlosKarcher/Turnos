@@ -294,6 +294,14 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   const finObj    = sesion?.fecha_fin    ? new Date(sesion.fecha_fin)    : null;
   const durIni    = esEdicion ? Math.round((finObj-fechaObj)/60000) : (servicios[0]?.duracion_minutos||60);
 
+  // Parsear telefono existente en partes: "+54 351 5550101" → area="351", num="5550101"
+  function parseTel(t="") {
+    const clean = t.replace(/^\+54\s*/,"").trim();
+    const parts  = clean.split(/\s+/);
+    return { area: parts[0]||"", num: parts.slice(1).join("")||"" };
+  }
+  const telParsed = parseTel(sesion?.cliente_telefono||"");
+
   const [form,setForm] = useState({
     terapeuta_id:    sesion?.terapeuta_id || (usuarioActual.rol==="terapeuta"?usuarioActual.id:terapeutas[0]?.id||""),
     servicio_id:     sesion?.servicio_id  || servicios[0]?.id||"",
@@ -302,7 +310,8 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
     hora:            sesion?.hora  || `${String(fechaObj.getHours()).padStart(2,"0")}:${String(fechaObj.getMinutes()).padStart(2,"0")}`,
     duracion_minutos:durIni,
     cliente_nombre:  sesion?.cliente_nombre   ||"",
-    cliente_telefono:sesion?.cliente_telefono ||"",
+    tel_area:        telParsed.area,
+    tel_num:         telParsed.num,
     cliente_email:   sesion?.cliente_email    ||"",
     motivo_consulta: sesion?.motivo_consulta  ||"",
     notas_sesion:    sesion?.notas_sesion     ||"",
@@ -332,7 +341,8 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   function guardar() {
     const fi=new Date(`${form.fecha}T${form.hora}`);
     const ff=addMinutes(fi,form.duracion_minutos);
-    onGuardar({...(sesion||{}),...form,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp,id:sesion?.id||Date.now().toString()});
+    const tel = ["+54", form.tel_area, form.tel_num].filter(Boolean).join(" ");
+    onGuardar({...(sesion||{}),...form,cliente_telefono:tel,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp,id:sesion?.id||Date.now().toString()});
   }
 
   const serv = servicios.find(s=>s.id===form.servicio_id);
@@ -343,7 +353,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
       <div className="modal" style={{maxWidth:640}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <h2 className="modal-title" style={{marginBottom:0}}>{esEdicion?"Editar sesion":"Nueva Sesion"}</h2>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>x</button>
+          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:22,lineHeight:1,padding:"2px 6px",borderRadius:6,transition:"color .2s"}} title="Cerrar sin guardar" onMouseEnter={e=>e.target.style.color="var(--danger)"} onMouseLeave={e=>e.target.style.color="var(--text2)"}>✕</button>
         </div>
 
         <div style={{display:"flex",gap:8,marginBottom:20}}>
@@ -354,6 +364,11 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
         {paso===1 && (
           <>
+            <div className="form-group">
+              <label className="form-label">Nombre del cliente</label>
+              <input className="form-input" placeholder="Nombre completo" value={form.cliente_nombre} onChange={e=>set("cliente_nombre",e.target.value)} />
+            </div>
+
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Terapeuta</label>
@@ -417,19 +432,23 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
             <hr style={{border:"none",borderTop:"1px solid var(--border)",margin:"4px 0 18px"}} />
 
-            <div className="form-group">
-              <label className="form-label">Nombre del cliente</label>
-              <input className="form-input" placeholder="Nombre completo" value={form.cliente_nombre} onChange={e=>set("cliente_nombre",e.target.value)} />
+            <div className="form-row" style={{alignItems:"flex-end"}}>
+              <div className="form-group" style={{flex:"0 0 auto"}}>
+                <label className="form-label">Tel. prefijo</label>
+                <div className="form-input" style={{opacity:.7,userSelect:"none",minWidth:58,textAlign:"center"}}>+54</div>
+              </div>
+              <div className="form-group" style={{flex:"0 0 100px"}}>
+                <label className="form-label">Característica</label>
+                <input className="form-input" placeholder="351" maxLength={5} value={form.tel_area} onChange={e=>set("tel_area",e.target.value.replace(/\D/g,""))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Número de celular</label>
+                <input className="form-input" placeholder="5550101" value={form.tel_num} onChange={e=>set("tel_num",e.target.value.replace(/\D/g,""))} />
+              </div>
             </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Telefono</label>
-                <input className="form-input" placeholder="+54 9 ..." value={form.cliente_telefono} onChange={e=>set("cliente_telefono",e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input className="form-input" type="email" value={form.cliente_email} onChange={e=>set("cliente_email",e.target.value)} />
-              </div>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-input" type="email" value={form.cliente_email} onChange={e=>set("cliente_email",e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">Motivo de consulta</label>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   authLogin, authLogout, authRestoreSession, authCambiarPassword,
   getSesiones, crearSesion, actualizarSesion,
-  getServicios, getTerapeutas, getClientes, getEspecialidades, getPerfilUsuario,
+  getServicios, getTerapeutas, getClientes, getPerfilUsuario,
   dbSelect, dbInsert, dbUpdate, dbDelete
 } from "../supabase.js";
 
@@ -373,7 +373,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
             </div>
 
             <div className="form-group">
-              <label className="form-label">Servicio</label>
+              <label className="form-label">Especialidad</label>
               <div className="chips">
                 {servicios.filter(s=>s.activo).map(s=>(
                   <div key={s.id} className={`chip ${form.servicio_id===s.id?"sel":""}`}
@@ -638,7 +638,7 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
       <div className="card" style={{padding:0}}>
         <table>
           <thead><tr>
-            <th>Fecha / Hora</th><th>Cliente</th><th>Servicio</th>
+            <th>Fecha / Hora</th><th>Cliente</th><th>Especialidad</th>
             {usuarioActual.rol==="admin" && <th>Terapeuta</th>}
             <th>Estado</th><th>Acciones</th>
           </tr></thead>
@@ -737,7 +737,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
           })}
         </div>
         <div className="card">
-          <div className="card-title">Servicios mas solicitados</div>
+          <div className="card-title">Especialidades mas solicitadas</div>
           {servicios.map(sv=>{
             const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
             const max=Math.max(...servicios.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
@@ -1121,7 +1121,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
                     </label>
                   );
                 })}
-                {(especialidades||[]).filter(e=>e.activo).length===0 && <span style={{fontSize:13,color:"var(--text2)"}}>No hay especialidades cargadas. Agregá desde el tab Especialidades.</span>}
+                {(especialidades||[]).filter(e=>e.activo).length===0 && <span style={{fontSize:13,color:"var(--text2)"}}>No hay especialidades. Agregá desde Admin → Especialidades.</span>}
               </div>
               {form.especialidades && <div style={{fontSize:11,color:"var(--text2)",marginTop:4}}>Seleccionadas: {form.especialidades}</div>}
             </div>
@@ -1149,9 +1149,9 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  ADMIN: SERVICIOS
+//  ADMIN: ESPECIALIDADES (tabla servicios)
 // ══════════════════════════════════════════════════════════
-function AdminServicios({ servicios, setServicios }) {
+function AdminServicios({ servicios, setServicios, sesiones }) {
   const [modal,setModal]=useState(false);
   const [editando,setEditando]=useState(null);
   const [form,setForm]=useState({nombre:"",descripcion:"",duracion_minutos:60,precio:0,color:"#6366f1",activo:true});
@@ -1164,6 +1164,7 @@ function AdminServicios({ servicios, setServicios }) {
   }
 
   async function guardar(){
+    if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
     if(editando){
       await dbUpdate("servicios", editando.id, form);
       setServicios(ss=>ss.map(s=>s.id===editando.id?{...s,...form}:s));
@@ -1179,22 +1180,36 @@ function AdminServicios({ servicios, setServicios }) {
     setServicios(ss=>ss.map(x=>x.id===s.id?{...x,activo:!x.activo}:x));
   }
 
-  async function eliminar(s){
+  async function eliminar(s, qty){
+    if(qty>0){ alert(`No se puede eliminar "${s.nombre}" porque tiene ${qty} sesion/es registradas.`); return; }
     if(!window.confirm(`¿Eliminar "${s.nombre}"?`)) return;
     await dbDelete("servicios", s.id);
     setServicios(ss=>ss.filter(x=>x.id!==s.id));
   }
 
+  async function limpiarNoUsadas(){
+    const noUsadas=servicios.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length===0);
+    if(noUsadas.length===0){ alert("No hay especialidades sin usar."); return; }
+    if(!window.confirm(`¿Eliminar ${noUsadas.length} especialidad/es sin sesiones?`)) return;
+    for(const s of noUsadas){
+      await dbDelete("servicios", s.id);
+    }
+    setServicios(ss=>ss.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length>0));
+  }
+
   return (
     <div>
-      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:20}}>
-        <button className="btn btn-primary" onClick={()=>abrir()}>+ Nuevo servicio</button>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
+        <button className="btn btn-ghost btn-sm" onClick={limpiarNoUsadas} style={{fontSize:12}}>🗑 Limpiar sin usar</button>
+        <button className="btn btn-primary" onClick={()=>abrir()}>+ Nueva especialidad</button>
       </div>
       <div className="card" style={{padding:0}}>
         <table>
-          <thead><tr><th>Servicio</th><th>Descripcion</th><th>Duracion</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Especialidad</th><th>Descripcion</th><th>Duracion</th><th>Sesiones</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
-            {servicios.map(s=>(
+            {servicios.map(s=>{
+              const qty=(sesiones||[]).filter(x=>x.servicio_id===s.id).length;
+              return (
               <tr key={s.id}>
                 <td>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1204,18 +1219,30 @@ function AdminServicios({ servicios, setServicios }) {
                 </td>
                 <td style={{color:"var(--text2)",fontSize:13}}>{s.descripcion}</td>
                 <td><span style={{background:s.color+"22",color:s.color,padding:"3px 10px",borderRadius:20,fontSize:12,fontWeight:600}}>{s.duracion_minutos} min</span></td>
-                <td><span className={`badge ${s.activo?"badge-confirmado":"badge-cancelado"}`}>{s.activo?"Activo":"Inactivo"}</span></td>
+                <td>
+                  {qty>0
+                    ? <span style={{fontWeight:700,color:"var(--accent2)"}}>{qty}</span>
+                    : <span style={{fontSize:12,color:"var(--text2)"}}>Sin uso</span>
+                  }
+                </td>
+                <td><span className={`badge ${s.activo?"badge-confirmado":"badge-cancelado"}`}>{s.activo?"Activa":"Inactiva"}</span></td>
                 <td>
                   <div style={{display:"flex",gap:6}}>
                     <button className="btn btn-ghost btn-sm" onClick={()=>abrir(s)}>Editar</button>
                     <button className={`btn btn-sm ${s.activo?"btn-danger":"btn-success"}`} onClick={()=>toggleServicio(s)}>
                       {s.activo?"Desactivar":"Activar"}
                     </button>
-                    <button className="btn btn-danger btn-sm" onClick={()=>eliminar(s)}>Borrar</button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={()=>eliminar(s,qty)}
+                      title={qty>0?`Tiene ${qty} sesiones`:"Sin sesiones, se puede eliminar"}
+                      style={{opacity:qty>0?0.4:1}}
+                    >Borrar</button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -1223,10 +1250,10 @@ function AdminServicios({ servicios, setServicios }) {
       {modal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
           <div className="modal">
-            <h2 className="modal-title">{editando?"Editar servicio":"Nuevo servicio"}</h2>
+            <h2 className="modal-title">{editando?"Editar especialidad":"Nueva especialidad"}</h2>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Nombre del servicio</label>
+                <label className="form-label">Nombre de la especialidad</label>
                 <input className="form-input" value={form.nombre} onChange={e=>set("nombre",e.target.value)} />
               </div>
               <div className="form-group">
@@ -1317,7 +1344,7 @@ function AdminReportes({ sesiones, usuarios, servicios }) {
           </table>
         </div>
         <div className="card">
-          <div className="card-title">Sesiones por servicio</div>
+          <div className="card-title">Sesiones por especialidad</div>
           {servicios.map(sv=>{
             const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
             const max=Math.max(...servicios.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
@@ -1337,7 +1364,7 @@ function AdminReportes({ sesiones, usuarios, servicios }) {
         <div className="card" style={{gridColumn:"1/-1"}}>
           <div className="card-title">Historial global</div>
           <table>
-            <thead><tr><th>Fecha</th><th>Cliente</th><th>Servicio</th><th>Terapeuta</th><th>Estado</th></tr></thead>
+            <thead><tr><th>Fecha</th><th>Cliente</th><th>Especialidad</th><th>Terapeuta</th><th>Estado</th></tr></thead>
             <tbody>
               {sesiones.sort((a,b)=>new Date(b.fecha_inicio)-new Date(a.fecha_inicio)).slice(0,12).map(s=>{
                 const sv=servMap[s.servicio_id];
@@ -1513,19 +1540,18 @@ function AdminEspecialidades({ especialidades, setEspecialidades }) {
 // ══════════════════════════════════════════════════════════
 //  PANEL ADMIN
 // ══════════════════════════════════════════════════════════
-function PanelAdmin({ usuarios, setUsuarios, servicios, setServicios, sesiones, clientes, especialidades, setEspecialidades }) {
+function PanelAdmin({ usuarios, setUsuarios, servicios, setServicios, sesiones, clientes }) {
   const [tab,setTab]=useState("terapeutas");
   return (
     <div>
       <div className="admin-tabs">
-        {[["terapeutas","Terapeutas"],["servicios","Servicios"],["especialidades","Especialidades"],["reportes","Reportes"],["sistema","Sistema"]].map(([k,l])=>(
+        {[["terapeutas","Terapeutas"],["especialidades","Especialidades"],["reportes","Reportes"],["sistema","Sistema"]].map(([k,l])=>(
           <div key={k} className={`admin-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</div>
         ))}
       </div>
-      {tab==="terapeutas"    && <AdminTerapeutas    usuarios={usuarios} setUsuarios={setUsuarios} sesiones={sesiones} especialidades={especialidades} />}
-      {tab==="servicios"     && <AdminServicios     servicios={servicios} setServicios={setServicios} />}
-      {tab==="especialidades"&& <AdminEspecialidades especialidades={especialidades} setEspecialidades={setEspecialidades} />}
-      {tab==="reportes"      && <AdminReportes      sesiones={sesiones} usuarios={usuarios} servicios={servicios} clientes={clientes} />}
+      {tab==="terapeutas"    && <AdminTerapeutas usuarios={usuarios} setUsuarios={setUsuarios} sesiones={sesiones} especialidades={servicios} />}
+      {tab==="especialidades"&& <AdminServicios  servicios={servicios} setServicios={setServicios} sesiones={sesiones} />}
+      {tab==="reportes"      && <AdminReportes   sesiones={sesiones} usuarios={usuarios} servicios={servicios} clientes={clientes} />}
       {tab==="sistema"       && <AdminSistema />}
     </div>
   );
@@ -1540,8 +1566,7 @@ export default function AgendaTerapeutica() {
   const [usuarios,  setUsuarios]  = useState(USUARIOS_MOCK);   // se carga de Supabase
   const [sesiones,  setSesiones]  = useState([]);
   const [clientes,  setClientes]  = useState([]);
-  const [servicios,     setServicios]     = useState(SERVICIOS_MOCK);  // se carga de Supabase
-  const [especialidades,setEspecialidades]= useState([]);
+  const [servicios,setServicios] = useState(SERVICIOS_MOCK);  // se carga de Supabase
   const [modalSes,      setModalSes]      = useState(null);
   const [sesVista,  setSesVista]  = useState(null);
   const [editando,  setEditando]  = useState(null);
@@ -1567,12 +1592,11 @@ export default function AgendaTerapeutica() {
   // ── Cargar datos desde Supabase ───────────────────────
   async function cargarDatos(u) {
     try {
-      const [srvs, ters, sess, clis, esps] = await Promise.all([
+      const [srvs, ters, sess, clis] = await Promise.all([
         getServicios(),
         getTerapeutas(),
         getSesiones(u.id, u.rol),
         getClientes(u.id, u.rol),
-        getEspecialidades(),
       ]);
       if (srvs?.length) setServicios(srvs);
       if (ters?.length) setUsuarios(prev => {
@@ -1581,7 +1605,6 @@ export default function AgendaTerapeutica() {
       });
       if (sess) setSesiones(sess);
       if (clis) setClientes(clis);
-      if (esps) setEspecialidades(esps);
     } catch(e){
       console.warn("Usando datos locales (Supabase no configurado):", e.message);
       // Fallback a datos mock si Supabase no está configurado aún
@@ -1705,7 +1728,7 @@ export default function AgendaTerapeutica() {
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
         {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} onVer={setSesVista} onCambiarEstado={cambiarEstado} />}
         {vista==="clientes"   && <ListaClientes clientes={clientes} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={usuario} />}
-        {vista==="admin" && usuario.rol==="admin" && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} especialidades={especialidades} setEspecialidades={setEspecialidades} />}
+        {vista==="admin" && usuario.rol==="admin" && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>
 
       {(modalSes!==null||editando!==null) && (

@@ -1011,7 +1011,10 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
 
   async function guardar(){
     if(!form.nombre.trim()||!form.email.trim()){ alert("Nombre y email son obligatorios."); return; }
-    const datos={nombre:form.nombre,email:form.email,rol:"terapeuta",es_terapeuta:true,
+    // Al editar, preservar el rol existente. Solo al crear nuevo se asigna "terapeuta".
+    const datos={nombre:form.nombre,email:form.email,
+      rol: editando ? editando.rol : "terapeuta",
+      es_terapeuta:true,
       especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),
       color:form.color,descripcion:form.descripcion,activo:form.activo,
       password_text:form.password_text||null};

@@ -1424,7 +1424,7 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
 //  ADMIN: REPORTES
 // ══════════════════════════════════════════════════════════
 function AdminReportes({ sesiones, usuarios, servicios }) {
-  const terapeutas=usuarios.filter(u=>u.rol==="terapeuta");
+  const terapeutas=usuarios.filter(u=>u.rol==="terapeuta" || u.es_terapeuta===true);
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
 
   return (

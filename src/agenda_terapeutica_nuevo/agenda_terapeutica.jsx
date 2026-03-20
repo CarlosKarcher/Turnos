@@ -319,6 +319,12 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
     if (k==="servicio_id") {
       const s=servicios.find(x=>x.id===v);
       setForm(f=>({...f,servicio_id:v,duracion_minutos:s?.duracion_minutos||f.duracion_minutos}));
+    } else if (k==="terapeuta_id") {
+      // Al cambiar terapeuta, resetear servicio al primero válido para ese terapeuta
+      const ter=terapeutas.find(t=>t.id===v);
+      const esp=ter?.especialidades||[];
+      const primerServ=servicios.find(s=>s.activo&&(esp.length===0||esp.includes(s.nombre)));
+      setForm(f=>({...f,terapeuta_id:v,servicio_id:primerServ?.id||"",duracion_minutos:primerServ?.duracion_minutos||f.duracion_minutos}));
     } else { setForm(f=>({...f,[k]:v})); }
   };
 
@@ -340,6 +346,10 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
   const serv = servicios.find(s=>s.id===form.servicio_id);
   const esAdmin = usuarioActual.rol==="admin";
+  // Solo mostrar terapias que el terapeuta seleccionado tiene en sus especialidades
+  const terapeutaSelec = terapeutas.find(t=>t.id===form.terapeuta_id);
+  const espTer = terapeutaSelec?.especialidades||[];
+  const serviciosFiltrados = servicios.filter(s=>s.activo&&(espTer.length===0||espTer.includes(s.nombre)));
 
   return (
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -385,13 +395,16 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
             <div className="form-group">
               <label className="form-label">Terapia</label>
               <div className="chips">
-                {servicios.filter(s=>s.activo).map(s=>(
-                  <div key={s.id} className={`chip ${form.servicio_id===s.id?"sel":""}`}
-                    style={{background:s.color+"33",color:s.color,borderColor:form.servicio_id===s.id?s.color:"transparent"}}
-                    onClick={()=>set("servicio_id",s.id)}>
-                    {s.nombre} - {s.duracion_minutos}min
-                  </div>
-                ))}
+                {serviciosFiltrados.length===0
+                  ? <div style={{color:"var(--text2)",fontSize:13}}>El terapeuta no tiene terapias asignadas</div>
+                  : serviciosFiltrados.map(s=>(
+                    <div key={s.id} className={`chip ${form.servicio_id===s.id?"sel":""}`}
+                      style={{background:s.color+"33",color:s.color,borderColor:form.servicio_id===s.id?s.color:"transparent"}}
+                      onClick={()=>set("servicio_id",s.id)}>
+                      {s.nombre} - {s.duracion_minutos}min
+                    </div>
+                  ))
+                }
               </div>
             </div>
 

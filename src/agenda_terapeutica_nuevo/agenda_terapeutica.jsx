@@ -760,14 +760,119 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
 }
 
 // ══════════════════════════════════════════════════════════
+//  MODAL EDITAR CLIENTE
+// ══════════════════════════════════════════════════════════
+function ModalEditarCliente({ cliente, onClose, onGuardar }) {
+  const [form, setForm] = useState({
+    nombre: cliente.nombre||"",
+    telefono: cliente.telefono||"",
+    email: cliente.email||"",
+    edad: cliente.edad||"",
+    fecha_nacimiento: cliente.fecha_nacimiento||"",
+    genero: cliente.genero||"",
+    lugar_residencia: cliente.lugar_residencia||"",
+    lugar_origen: cliente.lugar_origen||"",
+    motivo_consulta: cliente.motivo_consulta||"",
+    emociones_actuales: cliente.emociones_actuales||"",
+    notas: cliente.notas||"",
+  });
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const [guardando,setGuardando]=useState(false);
+
+  async function guardar(){
+    if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
+    setGuardando(true);
+    await onGuardar(cliente.id, form);
+    setGuardando(false);
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal" style={{maxWidth:560}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <h2 className="modal-title" style={{marginBottom:0}}>Editar cliente</h2>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>x</button>
+        </div>
+        <div style={{display:"grid",gap:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <div className="form-group" style={{gridColumn:"1/-1"}}>
+              <label className="form-label">Nombre y Apellido *</label>
+              <input className="form-input" value={form.nombre} onChange={e=>set("nombre",e.target.value)} placeholder="Nombre completo" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Teléfono</label>
+              <input className="form-input" value={form.telefono} onChange={e=>set("telefono",e.target.value)} placeholder="+54 9 ..." />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-input" type="email" value={form.email} onChange={e=>set("email",e.target.value)} placeholder="email@ejemplo.com" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Edad</label>
+              <input className="form-input" type="number" min="0" max="120" value={form.edad} onChange={e=>set("edad",e.target.value)} placeholder="Ej: 35" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Fecha de Nacimiento</label>
+              <input className="form-input" type="date" value={form.fecha_nacimiento} onChange={e=>set("fecha_nacimiento",e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Género</label>
+              <select className="form-input" value={form.genero} onChange={e=>set("genero",e.target.value)}>
+                <option value="">Seleccionar...</option>
+                <option value="F">Femenino</option>
+                <option value="M">Masculino</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Lugar de Residencia</label>
+              <input className="form-input" value={form.lugar_residencia} onChange={e=>set("lugar_residencia",e.target.value)} placeholder="Ciudad, Provincia" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Lugar de Origen</label>
+              <input className="form-input" value={form.lugar_origen} onChange={e=>set("lugar_origen",e.target.value)} placeholder="Ciudad, País" />
+            </div>
+            <div className="form-group" style={{gridColumn:"1/-1"}}>
+              <label className="form-label">Tema de la Consulta</label>
+              <textarea className="form-input" rows={2} value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} placeholder="Motivo principal de consulta..." style={{resize:"vertical"}} />
+            </div>
+            <div className="form-group" style={{gridColumn:"1/-1"}}>
+              <label className="form-label">Emociones Actuales</label>
+              <textarea className="form-input" rows={2} value={form.emociones_actuales} onChange={e=>set("emociones_actuales",e.target.value)} placeholder="Cómo se siente actualmente..." style={{resize:"vertical"}} />
+            </div>
+            <div className="form-group" style={{gridColumn:"1/-1"}}>
+              <label className="form-label">Notas adicionales</label>
+              <textarea className="form-input" rows={2} value={form.notas} onChange={e=>set("notas",e.target.value)} placeholder="Otras observaciones..." style={{resize:"vertical"}} />
+            </div>
+          </div>
+        </div>
+        <div className="form-actions">
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={guardar} disabled={guardando}>{guardando?"Guardando...":"Guardar cambios"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
 //  LISTA CLIENTES
 // ══════════════════════════════════════════════════════════
-function ListaClientes({ clientes, sesiones, servicios }) {
+function ListaClientes({ clientes, setClientes, sesiones, servicios }) {
   const [busqueda,setBusqueda]=useState("");
   const [sel,setSel]=useState(null);
+  const [editando,setEditando]=useState(null);
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const filtrados=clientes.filter(c=>c.nombre?.toLowerCase().includes(busqueda.toLowerCase())||c.email?.toLowerCase().includes(busqueda.toLowerCase()));
   const sesCli=sel?sesiones.filter(s=>s.cliente_id===sel.id||s.cliente_nombre===sel.nombre):[];
+
+  async function guardarCliente(id, datos){
+    await dbUpdate("clientes", id, {...datos, updated_at: new Date().toISOString()});
+    setClientes(cs=>cs.map(c=>c.id===id?{...c,...datos}:c));
+    setSel(prev=>prev?.id===id?{...prev,...datos}:prev);
+  }
+
+  const GENERO={F:"Femenino",M:"Masculino"};
 
   return (
     <div style={{display:"grid",gridTemplateColumns:sel?"1fr 1fr":"1fr",gap:20}}>
@@ -780,7 +885,7 @@ function ListaClientes({ clientes, sesiones, servicios }) {
               {filtrados.map(c=>{
                 const tot=sesiones.filter(s=>s.cliente_id===c.id||s.cliente_nombre===c.nombre).length;
                 return (
-                  <tr key={c.id} style={{cursor:"pointer"}} onClick={()=>setSel(c===sel?null:c)}>
+                  <tr key={c.id} style={{cursor:"pointer",background:sel?.id===c.id?"var(--surface2)":""}} onClick={()=>setSel(c===sel?null:c)}>
                     <td>
                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                         <div className="avatar" style={{width:36,height:36,fontSize:14,background:"var(--surface2)",color:"var(--accent2)"}}>{c.nombre?.[0]?.toUpperCase()}</div>
@@ -795,21 +900,34 @@ function ListaClientes({ clientes, sesiones, servicios }) {
                   </tr>
                 );
               })}
+              {filtrados.length===0 && <tr><td colSpan={3} style={{textAlign:"center",color:"var(--text2)",padding:20}}>Sin clientes</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
       {sel && (
         <div>
           <div className="card" style={{marginBottom:16}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
-              <h3 style={{fontFamily:"'DM Serif Display',serif",fontSize:20}}>{sel.nombre}</h3>
-              <button className="btn btn-ghost btn-sm" onClick={()=>setSel(null)}>x</button>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+              <div>
+                <h3 style={{fontFamily:"'DM Serif Display',serif",fontSize:20,marginBottom:4}}>{sel.nombre}</h3>
+                {sel.genero && <span style={{fontSize:12,color:"var(--text2)"}}>{GENERO[sel.genero]}{sel.edad ? ` · ${sel.edad} años` : ""}</span>}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn btn-warn btn-sm" onClick={()=>setEditando(sel)}>Editar</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>setSel(null)}>x</button>
+              </div>
             </div>
-            <div style={{display:"grid",gap:8,fontSize:13,color:"var(--text2)"}}>
-              {sel.telefono && <div>Tel: {sel.telefono}</div>}
-              {sel.email    && <div>Email: {sel.email}</div>}
-              {sel.motivo_consulta && <div>Motivo: {sel.motivo_consulta}</div>}
+            <div style={{display:"grid",gap:8,fontSize:13}}>
+              {sel.telefono         && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Teléfono</span><span>{sel.telefono}</span></div>}
+              {sel.email            && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Email</span><span>{sel.email}</span></div>}
+              {sel.fecha_nacimiento && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Fecha de nac.</span><span>{sel.fecha_nacimiento}</span></div>}
+              {sel.lugar_residencia && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Residencia</span><span>{sel.lugar_residencia}</span></div>}
+              {sel.lugar_origen     && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Origen</span><span>{sel.lugar_origen}</span></div>}
+              {sel.motivo_consulta  && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Tema consulta</span><span>{sel.motivo_consulta}</span></div>}
+              {sel.emociones_actuales && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Emociones</span><span>{sel.emociones_actuales}</span></div>}
+              {sel.notas            && <div style={{display:"flex",gap:8}}><span style={{color:"var(--text2)",minWidth:120}}>Notas</span><span>{sel.notas}</span></div>}
             </div>
           </div>
           <div className="card">
@@ -829,6 +947,14 @@ function ListaClientes({ clientes, sesiones, servicios }) {
             })}
           </div>
         </div>
+      )}
+
+      {editando && (
+        <ModalEditarCliente
+          cliente={editando}
+          onClose={()=>setEditando(null)}
+          onGuardar={guardarCliente}
+        />
       )}
     </div>
   );
@@ -1431,7 +1557,7 @@ export default function AgendaTerapeutica() {
         {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} />}
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
         {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={usuario} onVer={setSesVista} onCambiarEstado={cambiarEstado} />}
-        {vista==="clientes"   && <ListaClientes clientes={clientes} sesiones={sesionesFiltradas} servicios={servicios} />}
+        {vista==="clientes"   && <ListaClientes clientes={clientes} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} />}
         {vista==="admin" && usuario.rol==="admin" && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>
 

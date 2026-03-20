@@ -150,8 +150,9 @@ const CSS = `
   .ter-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--tc,#6366f1);}
   .cal-nav{display:flex;align-items:center;gap:16px;margin-bottom:20px;}
   .cal-nav h2{font-family:'DM Serif Display',serif;font-size:22px;flex:1;}
-  .week-grid{display:grid;grid-template-columns:55px repeat(7,1fr);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
-  .w-header{background:var(--surface2);padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;border-bottom:1px solid var(--border);}
+  .week-grid-wrap{max-height:calc(100vh - 200px);overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);}
+  .week-grid{display:grid;grid-template-columns:55px repeat(7,1fr);}
+  .w-header{position:sticky;top:0;z-index:10;background:var(--surface2);padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;border-bottom:1px solid var(--border);}
   .w-header.hoy{color:var(--accent2);}
   .t-slot{border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:52px;position:relative;cursor:pointer;transition:background .15s;}
   .t-slot:hover{background:rgba(124,111,219,.05);}
@@ -584,6 +585,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
         <button className="btn btn-ghost btn-sm" onClick={()=>nav(1)}>Siguiente</button>
         <button className="btn btn-primary btn-sm" onClick={()=>onNueva()}>+ Nueva</button>
       </div>
+      <div className="week-grid-wrap">
       <div className="week-grid">
         <div className="w-header"/>
         {dias.map((d,i)=>(
@@ -614,6 +616,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
             })}
           </>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -700,9 +703,10 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
 // ══════════════════════════════════════════════════════════
 function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual }) {
   const hoy=new Date(); hoy.setHours(0,0,0,0);
-  const fin=new Date(hoy); fin.setDate(hoy.getDate()+7);
-  const sesHoy   =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime(); });
-  const proximas =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin&&s.estado!=="cancelado"; }).sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
+  const fin7=new Date(hoy); fin7.setDate(hoy.getDate()+7);
+  const sesHoy    =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime(); });
+  const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin7&&s.estado!=="cancelado"; });
+  const proximas  =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&s.estado!=="cancelado"; }).sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
   const completadas=sesiones.filter(s=>s.estado==="completado").length;
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terMap =Object.fromEntries(terapeutas.map(t=>[t.id,t]));
@@ -712,7 +716,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
       <div className="stats-grid">
         {[
           {label:"Sesiones hoy",val:sesHoy.length,    c:"var(--accent)"},
-          {label:"Esta semana", val:proximas.length,   c:"var(--accent2)"},
+          {label:"Esta semana", val:sesSemana.length,  c:"var(--accent2)"},
           {label:"Completadas", val:completadas,       c:"var(--success)"},
           {label:"Clientes",    val:clientes.length,   c:"var(--gold)"},
         ].map((s,i)=>(

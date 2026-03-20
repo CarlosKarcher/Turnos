@@ -501,8 +501,8 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
               <label className="form-label">Intensidad percibida: <strong style={{color:"var(--accent2)"}}>{anamnesis.intensidad}/10</strong></label>
               <input type="range" min={1} max={10} value={anamnesis.intensidad} onChange={e=>setAnamnesis(a=>({...a,intensidad:+e.target.value}))} style={{width:"100%",accentColor:"var(--accent)"}} />
             </div>
-            <button className="btn btn-primary" style={{width:"100%",justifyContent:"center"}} onClick={generarIA} disabled={iaLoad}>
-              {iaLoad ? <><span className="spinner"/> Analizando...</> : "Generar analisis con IA"}
+            <button className="btn btn-primary" style={{width:"100%",justifyContent:"center",opacity:0.5,cursor:"not-allowed"}} disabled title="Próximamente disponible">
+              Generar analisis con IA (próximamente)
             </button>
             {iaResp && (
               <div className="ia-box">

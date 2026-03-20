@@ -812,7 +812,12 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
   async function guardar(){
     if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
     setGuardando(true);
-    await onGuardar(cliente.id, form);
+    const datos={
+      ...form,
+      edad: form.edad!==""? parseInt(form.edad,10) : null,
+      fecha_nacimiento: form.fecha_nacimiento||null,
+    };
+    await onGuardar(cliente.id, datos);
     setGuardando(false);
     onClose();
   }
@@ -832,7 +837,10 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
             </div>
             <div className="form-group">
               <label className="form-label">Teléfono</label>
-              <input className="form-input" value={form.telefono} onChange={e=>set("telefono",e.target.value)} placeholder="+54 9 ..." />
+              <div style={{display:"flex",alignItems:"center"}}>
+                <span style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRight:"none",borderRadius:"10px 0 0 10px",padding:"10px 12px",color:"var(--text2)",fontSize:14,whiteSpace:"nowrap"}}>+54</span>
+                <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} value={form.telefono} onChange={e=>set("telefono",e.target.value)} placeholder="351 401 7320" />
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">Email</label>

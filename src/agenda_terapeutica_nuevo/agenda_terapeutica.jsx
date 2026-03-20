@@ -959,7 +959,7 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
         </div>
         <div className="card" style={{padding:0}}>
           <table>
-            <thead><tr><th>Cliente</th>{esAdmin&&<th>Terapeuta</th>}<th>Contacto</th><th>Sesiones</th></tr></thead>
+            <thead><tr><th>Cliente</th>{esAdmin&&<th>Terapeuta</th>}<th>Contacto</th><th style={{textAlign:"center"}}>Sesiones</th><th></th></tr></thead>
             <tbody>
               {filtrados.map(c=>{
                 const tot=sesiones.filter(s=>(s.cliente_id===c.id||s.cliente_nombre===c.nombre)&&s.terapeuta_id===c.terapeuta_id).length;
@@ -985,7 +985,10 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
                       </td>
                     )}
                     <td style={{fontSize:12,color:"var(--text2)"}}>{c.telefono}<br/>{c.email}</td>
-                    <td><span style={{fontWeight:700,color:"var(--accent2)"}}>{tot}</span></td>
+                    <td style={{textAlign:"center"}}><span style={{fontWeight:700,color:"var(--accent2)"}}>{tot}</span></td>
+                    <td onClick={e=>e.stopPropagation()}>
+                      <button className="btn btn-sm btn-ghost" style={{padding:"4px 10px",fontSize:12}} onClick={()=>setEditando(c)}>Editar</button>
+                    </td>
                   </tr>
                 );
               })}

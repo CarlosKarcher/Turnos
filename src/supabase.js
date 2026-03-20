@@ -34,7 +34,11 @@ export async function authLogin(email, password) {
 
   if (!res.ok) {
     // Supabase devuelve error_description en español si la config lo permite
-    throw new Error(data.error_description || data.message || "Error al iniciar sesión");
+    const msg = data.error_description || data.message || data.msg || "";
+    if (msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("credentials")) {
+      throw new Error("Email o contraseña incorrectos.");
+    }
+    throw new Error(msg || "Error al iniciar sesión");
   }
 
   _sessionToken = data.access_token;

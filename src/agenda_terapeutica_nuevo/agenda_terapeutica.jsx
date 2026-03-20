@@ -1054,7 +1054,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
     setEditando(u);
     setVerPass(false);
     setForm(u?{nombre:u.nombre,email:u.email,password_text:u.password_text||"",especialidades:(u.especialidades||[]).join(", "),color:u.color,descripcion:u.descripcion||"",activo:u.activo}
-               :{nombre:"",email:"",password_text:"1234",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
+               :{nombre:"",email:"",password_text:"123456",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
     setModal(true);
   }
 
@@ -1066,7 +1066,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
       es_terapeuta:true,
       especialidades:form.especialidades.split(",").map(s=>s.trim()).filter(Boolean),
       color:form.color,descripcion:form.descripcion,activo:form.activo,
-      password_text: editando ? (form.password_text||null) : "1234",
+      password_text: editando ? (form.password_text||null) : "123456",
       debe_cambiar_clave: editando ? editando.debe_cambiar_clave : true};
     try {
       if(editando){
@@ -1079,7 +1079,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
         if(!nuevo?.id){ alert("Error: no se pudo guardar el terapeuta en la base de datos."); return; }
         // Crear usuario Auth con clave "1234" y confirmar via RPC
         try {
-          await crearUsuarioAuth(form.email, "1234", nuevo.id);
+          await crearUsuarioAuth(form.email, "123456", nuevo.id);
         } catch(eAuth) {
           console.warn("Auth no creado:", eAuth.message);
         }
@@ -1569,7 +1569,7 @@ function CambiarClaveForm({ usuario, onCambiado }) {
     setError("");
     if (nueva.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
     if (nueva !== confirma) { setError("Las contraseñas no coinciden."); return; }
-    if (nueva === "1234") { setError("No podés usar '1234' como contraseña personal."); return; }
+    if (nueva === "123456") { setError("Debés establecer una contraseña personal, no la clave inicial."); return; }
     setLoading(true);
     try {
       await authCambiarPassword(nueva);

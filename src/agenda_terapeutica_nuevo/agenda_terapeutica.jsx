@@ -338,6 +338,11 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
   function guardar() {
     const fi=new Date(`${form.fecha}T${form.hora}`);
+    // No permitir sesiones con fecha anterior a hoy (solo al crear nueva)
+    if(!esEdicion){
+      const hoyInicio=new Date(); hoyInicio.setHours(0,0,0,0);
+      if(fi<hoyInicio){ alert("No se puede cargar una sesión con fecha anterior al día de hoy."); return; }
+    }
     const ff=addMinutes(fi,form.duracion_minutos);
     const payload={...(sesion||{}),...form,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp};
     if(!sesion?.id) delete payload.id; // sesión nueva: dejar que la BD genere el UUID
@@ -411,7 +416,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Fecha</label>
-                <input type="date" className="form-input" value={form.fecha} onChange={e=>set("fecha",e.target.value)} />
+                <input type="date" className="form-input" value={form.fecha} min={esEdicion?"":new Date().toISOString().split("T")[0]} onChange={e=>set("fecha",e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Hora inicio</label>
@@ -716,15 +721,9 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
 // ══════════════════════════════════════════════════════════
 function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual }) {
   const hoy=new Date(); hoy.setHours(0,0,0,0);
-  // Inicio de la semana actual (lunes)
-  const inicioSemana=new Date(hoy); inicioSemana.setDate(hoy.getDate()-((hoy.getDay()+6)%7));
-  // Fin de la semana actual (domingo) + 14 días extras para próximas
-  const finSemana=new Date(inicioSemana); finSemana.setDate(inicioSemana.getDate()+6); finSemana.setHours(23,59,59,999);
   const fin14=new Date(hoy); fin14.setDate(hoy.getDate()+14);
   const sesHoy    =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime(); });
-  // Esta semana: lunes a domingo de la semana actual (incluye días ya pasados)
-  const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=inicioSemana&&f<=finSemana&&s.estado!=="cancelado"; });
-  // Próximas: desde hoy hasta 14 días
+  const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; });
   const proximas  =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; }).sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
   const completadas=sesiones.filter(s=>s.estado==="completado").length;
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));

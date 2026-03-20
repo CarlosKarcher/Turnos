@@ -288,16 +288,18 @@ function Login({ onLogin }) {
 //  MODAL SESION (nueva + editar)
 // ══════════════════════════════════════════════════════════
 function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, onGuardar }) {
-  const esEdicion = !!sesion;
-  const fechaObj  = sesion ? new Date(sesion.fecha_inicio) : new Date();
-  const finObj    = sesion ? new Date(sesion.fecha_fin)    : null;
-  const durIni    = sesion ? Math.round((finObj-fechaObj)/60000) : (servicios[0]?.duracion_minutos||60);
+  // esEdicion solo si tiene id (sesiones reales). {fecha,hora} del calendario = nueva sesión con fecha pre-cargada.
+  const esEdicion = !!(sesion?.id);
+  const fechaObj  = sesion?.fecha_inicio ? new Date(sesion.fecha_inicio) : new Date();
+  const finObj    = sesion?.fecha_fin    ? new Date(sesion.fecha_fin)    : null;
+  const durIni    = esEdicion ? Math.round((finObj-fechaObj)/60000) : (servicios[0]?.duracion_minutos||60);
 
   const [form,setForm] = useState({
     terapeuta_id:    sesion?.terapeuta_id || (usuarioActual.rol==="terapeuta"?usuarioActual.id:terapeutas[0]?.id||""),
     servicio_id:     sesion?.servicio_id  || servicios[0]?.id||"",
-    fecha:           fechaObj.toISOString().split("T")[0],
-    hora:            `${String(fechaObj.getHours()).padStart(2,"0")}:${String(fechaObj.getMinutes()).padStart(2,"0")}`,
+    // Usa fecha/hora del slot clicado si vienen del calendario, sino fecha actual
+    fecha:           sesion?.fecha || fechaObj.toISOString().split("T")[0],
+    hora:            sesion?.hora  || `${String(fechaObj.getHours()).padStart(2,"0")}:${String(fechaObj.getMinutes()).padStart(2,"0")}`,
     duracion_minutos:durIni,
     cliente_nombre:  sesion?.cliente_nombre   ||"",
     cliente_telefono:sesion?.cliente_telefono ||"",

@@ -255,9 +255,9 @@ function Login({ onLogin }) {
             {resetMsg && <div style={{color:"var(--success)",fontSize:13,marginBottom:14}}>{resetMsg}</div>}
             <button className="btn btn-primary" style={{width:"100%",justifyContent:"center"}} onClick={async()=>{
               try {
-                await fetch(`${(await import("./supabase.js")).SUPABASE_URL}/auth/v1/recover`,{
+                await fetch(`${(await import("../supabase.js")).SUPABASE_URL}/auth/v1/recover`,{
                   method:"POST",
-                  headers:{"Content-Type":"application/json","apikey":(await import("./supabase.js")).SUPABASE_ANON_KEY},
+                  headers:{"Content-Type":"application/json","apikey":(await import("../supabase.js")).SUPABASE_ANON_KEY},
                   body:JSON.stringify({email})
                 });
                 setResetMsg("Email enviado. Revisa tu casilla de correo.");

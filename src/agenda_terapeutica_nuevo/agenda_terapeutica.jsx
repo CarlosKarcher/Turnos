@@ -185,8 +185,8 @@ function Login({ onLogin }) {
     e.preventDefault();
     setLoading(true); setError("");
     try {
-      // 1. Autenticar con Supabase Auth
-      const authData = await authLogin(email, pass);
+      // 1. Autenticar con Supabase Auth (email siempre en minúsculas)
+      const authData = await authLogin(email.trim().toLowerCase(), pass);
 
       // 2. Obtener perfil del usuario desde la tabla "terapeutas"
       //    (o "usuarios" si usas esa tabla)

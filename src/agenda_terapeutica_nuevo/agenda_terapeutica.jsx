@@ -831,9 +831,10 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
   async function guardar(){
     if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
     setGuardando(true);
+    const { tel_prefijo, ...formSinPrefijo } = form;
     const datos={
-      ...form,
-      telefono: [form.tel_prefijo, form.telefono].filter(Boolean).join(" ").trim(),
+      ...formSinPrefijo,
+      telefono: form.telefono.trim() ? [tel_prefijo, form.telefono].filter(Boolean).join(" ").trim() : "",
       edad: form.edad!==""? parseInt(form.edad,10) : null,
       fecha_nacimiento: form.fecha_nacimiento||null,
     };

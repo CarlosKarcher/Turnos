@@ -352,8 +352,10 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
       if(fi<hoyInicio){ alert("No se puede cargar una sesión con fecha anterior al día de hoy."); return; }
     }
     const ff=addMinutes(fi,form.duracion_minutos);
-    // Combinar prefijo + número en un solo campo
-    const telCompleto = [form.tel_prefijo, form.cliente_telefono].filter(Boolean).join(" ").trim();
+    // Combinar prefijo + número solo si hay número; si está vacío guardar ""
+    const telCompleto = form.cliente_telefono.trim()
+      ? [form.tel_prefijo, form.cliente_telefono].filter(Boolean).join(" ").trim()
+      : "";
     const payload={...(sesion||{}),...form,cliente_telefono:telCompleto,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp};
     if(!sesion?.id) delete payload.id;
     onGuardar(payload);

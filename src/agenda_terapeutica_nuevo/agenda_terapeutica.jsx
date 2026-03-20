@@ -156,8 +156,8 @@ const CSS = `
   .w-header.hoy{color:var(--accent2);}
   .t-slot{border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:52px;position:relative;cursor:pointer;transition:background .15s;}
   .t-slot.pasado{background:rgba(180,180,180,.06);cursor:default;}
-  .t-slot.activo{background:rgba(34,197,94,.08);}
-  .t-slot.activo:hover{background:rgba(34,197,94,.18);}
+  .t-slot.activo{background:rgba(34,197,94,.22);}
+  .t-slot.activo:hover{background:rgba(34,197,94,.35);}
   .t-slot.pasado:hover{background:rgba(180,180,180,.06);}
   .t-label{font-size:10px;color:var(--text2);text-align:right;padding:3px 6px 0 0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:52px;}
   .ses-chip{position:absolute;left:2px;right:2px;top:2px;border-radius:6px;padding:3px 6px;font-size:11px;font-weight:600;cursor:pointer;z-index:10;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;transition:transform .15s;}

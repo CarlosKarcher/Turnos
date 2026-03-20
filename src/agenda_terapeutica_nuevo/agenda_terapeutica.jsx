@@ -1701,7 +1701,7 @@ export default function AgendaTerapeutica() {
 
       {(modalSes!==null||editando!==null) && (
         <ModalSesion
-          sesion={editando||null}
+          sesion={editando||modalSes}
           usuarioActual={usuario}
           terapeutas={terapeutas}
           servicios={servicios}

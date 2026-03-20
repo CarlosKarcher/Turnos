@@ -312,7 +312,8 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
     hora:            sesion?.hora  || `${String(fechaObj.getHours()).padStart(2,"0")}:${String(fechaObj.getMinutes()).padStart(2,"0")}`,
     duracion_minutos:durIni,
     cliente_nombre:  sesion?.cliente_nombre   ||"",
-    cliente_telefono:sesion?.cliente_telefono ||"",
+    tel_prefijo:     (()=>{ const t=sesion?.cliente_telefono||""; if(t.startsWith("+")){ const i=t.indexOf(" "); return i>0?t.slice(0,i):"+54"; } return "+54"; })(),
+    cliente_telefono:(()=>{ const t=sesion?.cliente_telefono||""; if(t.startsWith("+")){ const i=t.indexOf(" "); return i>0?t.slice(i+1):t; } return t; })(),
     cliente_email:   sesion?.cliente_email    ||"",
     motivo_consulta: sesion?.motivo_consulta  ||"",
     notas_sesion:    sesion?.notas_sesion     ||"",
@@ -353,8 +354,10 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
       if(fi<hoyInicio){ alert("No se puede cargar una sesión con fecha anterior al día de hoy."); return; }
     }
     const ff=addMinutes(fi,form.duracion_minutos);
-    const payload={...(sesion||{}),...form,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp};
-    if(!sesion?.id) delete payload.id; // sesión nueva: dejar que la BD genere el UUID
+    // Combinar prefijo + número en un solo campo
+    const telCompleto = [form.tel_prefijo, form.cliente_telefono].filter(Boolean).join(" ").trim();
+    const payload={...(sesion||{}),...form,cliente_telefono:telCompleto,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp};
+    if(!sesion?.id) delete payload.id;
     onGuardar(payload);
   }
 
@@ -456,7 +459,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
               <div className="form-group">
                 <label className="form-label">Teléfono</label>
                 <div style={{display:"flex",alignItems:"center",gap:0}}>
-                  <span style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRight:"none",borderRadius:"10px 0 0 10px",padding:"10px 12px",color:"var(--text2)",fontSize:14,whiteSpace:"nowrap"}}>+54</span>
+                  <input className="form-input" style={{borderRadius:"10px 0 0 10px",width:68,textAlign:"center",borderRight:"none",padding:"10px 8px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} placeholder="+54" />
                   <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} placeholder="351 401 7320" value={form.cliente_telefono} onChange={e=>set("cliente_telefono",e.target.value)} />
                 </div>
               </div>
@@ -802,9 +805,12 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
 //  MODAL EDITAR CLIENTE
 // ══════════════════════════════════════════════════════════
 function ModalEditarCliente({ cliente, onClose, onGuardar }) {
+  const parsePrefijo = (t="") => { if(t.startsWith("+")){ const i=t.indexOf(" "); return i>0?{pref:t.slice(0,i),num:t.slice(i+1)}:{pref:"+54",num:t}; } return {pref:"+54",num:t}; };
+  const telP = parsePrefijo(cliente.telefono||"");
   const [form, setForm] = useState({
     nombre: cliente.nombre||"",
-    telefono: cliente.telefono||"",
+    tel_prefijo: telP.pref,
+    telefono: telP.num,
     email: cliente.email||"",
     edad: cliente.edad||"",
     fecha_nacimiento: cliente.fecha_nacimiento||"",
@@ -823,6 +829,7 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
     setGuardando(true);
     const datos={
       ...form,
+      telefono: [form.tel_prefijo, form.telefono].filter(Boolean).join(" ").trim(),
       edad: form.edad!==""? parseInt(form.edad,10) : null,
       fecha_nacimiento: form.fecha_nacimiento||null,
     };
@@ -846,8 +853,8 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
             </div>
             <div className="form-group">
               <label className="form-label">Teléfono</label>
-              <div style={{display:"flex",alignItems:"center"}}>
-                <span style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRight:"none",borderRadius:"10px 0 0 10px",padding:"10px 12px",color:"var(--text2)",fontSize:14,whiteSpace:"nowrap"}}>+54</span>
+              <div style={{display:"flex",alignItems:"center",gap:0}}>
+                <input className="form-input" style={{borderRadius:"10px 0 0 10px",width:68,textAlign:"center",borderRight:"none",padding:"10px 8px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} placeholder="+54" />
                 <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} value={form.telefono} onChange={e=>set("telefono",e.target.value)} placeholder="351 401 7320" />
               </div>
             </div>

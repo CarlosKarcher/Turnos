@@ -1597,7 +1597,7 @@ export default function AgendaTerapeutica() {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <h1>🌿 Sentir</h1>
-          <p>Agenda Terapeutica</p>
+          <p>Agenda Terapéutica</p>
         </div>
         <div className="sidebar-user">
           <div className="avatar" style={{width:36,height:36,fontSize:15,background:usuario.color+"33",color:usuario.color}}>{usuario.nombre?.[0]}</div>

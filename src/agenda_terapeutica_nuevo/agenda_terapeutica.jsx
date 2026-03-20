@@ -1739,19 +1739,6 @@ export default function AgendaTerapeutica() {
     <><style>{CSS}</style><Login onLogin={async u=>{setUsuario(u);await cargarDatos(u);setVista("dashboard");}}/></>
   );
 
-  // ── Modal forzar cambio de clave ──────────────────────────
-  if(usuario.debe_cambiar_clave) return (
-    <><style>{CSS}</style>
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)"}}>
-      <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:16,padding:40,width:400,maxWidth:"90vw"}}>
-        <h2 style={{color:"var(--accent)",marginBottom:8,textAlign:"center"}}>Cambiar contraseña</h2>
-        <p style={{color:"var(--text2)",fontSize:14,textAlign:"center",marginBottom:24}}>
-          Es tu primer ingreso. Debés establecer una contraseña personal para continuar.
-        </p>
-        <CambiarClaveForm usuario={usuario} onCambiado={async(u)=>{setUsuario(u);}} />
-      </div>
-    </div></>
-  );
 
   const navAdmin=[
     {id:"dashboard",icon:"📊",label:"Dashboard",sec:null},
@@ -1836,6 +1823,22 @@ export default function AgendaTerapeutica() {
           onCancelar={id=>{cambiarEstado(id,"cancelado");setSesVista(null);}}
           onEliminar={eliminarSesion}
         />
+      )}
+
+      {/* Modal forzar cambio de clave — primer ingreso */}
+      {usuario.debe_cambiar_clave && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:20,padding:"40px 36px",width:420,maxWidth:"92vw",boxShadow:"0 20px 60px rgba(0,0,0,0.5)"}}>
+            <div style={{textAlign:"center",marginBottom:24}}>
+              <div style={{fontSize:40,marginBottom:12}}>🔐</div>
+              <h2 style={{color:"var(--accent)",marginBottom:8,fontSize:22}}>¡Bienvenido/a!</h2>
+              <p style={{color:"var(--text2)",fontSize:13,marginBottom:6}}>Ingresaste como:</p>
+              <div style={{background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:8,padding:"8px 16px",fontSize:14,color:"var(--text)",marginBottom:12}}>{usuario.email}</div>
+              <p style={{color:"var(--text2)",fontSize:13}}>Por seguridad, debés establecer tu propia contraseña antes de continuar.</p>
+            </div>
+            <CambiarClaveForm usuario={usuario} onCambiado={u=>setUsuario(u)} />
+          </div>
+        </div>
       )}
     </div></>
   );

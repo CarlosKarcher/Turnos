@@ -1449,7 +1449,7 @@ function PanelAdmin({ usuarios, setUsuarios, servicios, setServicios, sesiones, 
   return (
     <div>
       <div className="admin-tabs">
-        {[["terapeutas","Terapeutas"],["especialidades","Especialidades"],["reportes","Reportes"],["sistema","Sistema"]].map(([k,l])=>(
+        {[["terapeutas","👥 Terapeutas"],["especialidades","🎯 Especialidades"],["reportes","📊 Reportes"],["sistema","⚙️ Sistema"]].map(([k,l])=>(
           <div key={k} className={`admin-tab ${tab===k?"active":""}`} onClick={()=>setTab(k)}>{l}</div>
         ))}
       </div>

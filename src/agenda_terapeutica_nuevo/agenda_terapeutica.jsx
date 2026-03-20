@@ -662,7 +662,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
 // ══════════════════════════════════════════════════════════
 //  LISTA SESIONES
 // ══════════════════════════════════════════════════════════
-function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, onCambiarEstado }) {
+function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, onCambiarEstado, onEliminar }) {
   const [filtro,setFiltro]   = useState("todas");
   const [busqueda,setBusqueda]=useState("");
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
@@ -718,11 +718,12 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
                   )}
                   <td><span className={`badge badge-${s.estado}`}>{s.estado}</span></td>
                   <td>
-                    <div style={{display:"flex",gap:6}}>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
                       <button className="btn btn-ghost btn-sm" onClick={()=>onVer(s)}>Ver</button>
                       {s.estado!=="completado"&&s.estado!=="cancelado"&&(
                         <button className="btn btn-success btn-sm" onClick={()=>onCambiarEstado(s.id,"completado")}>OK</button>
                       )}
+                      <button title="Eliminar sesión" onClick={()=>onEliminar(s.id)} style={{background:"transparent",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:6,color:"#f87171",fontSize:16,lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.background="#f8717122"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>🗑️</button>
                     </div>
                   </td>
                 </tr>
@@ -1828,7 +1829,7 @@ export default function AgendaTerapeutica() {
 
         {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
-        {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} onVer={setSesVista} onCambiarEstado={cambiarEstado} />}
+        {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} onVer={setSesVista} onCambiarEstado={cambiarEstado} onEliminar={eliminarSesion} />}
         {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
         {vista==="admin" && esAdminViendo && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>

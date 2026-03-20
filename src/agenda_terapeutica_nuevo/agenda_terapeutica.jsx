@@ -332,7 +332,9 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   function guardar() {
     const fi=new Date(`${form.fecha}T${form.hora}`);
     const ff=addMinutes(fi,form.duracion_minutos);
-    onGuardar({...(sesion||{}),...form,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp,id:sesion?.id||Date.now().toString()});
+    const payload={...(sesion||{}),...form,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp};
+    if(!sesion?.id) delete payload.id; // sesión nueva: dejar que la BD genere el UUID
+    onGuardar(payload);
   }
 
   const serv = servicios.find(s=>s.id===form.servicio_id);

@@ -110,19 +110,19 @@ export async function authRestoreSession() {
   return null;
 }
 
-// ── AUTH: Cambiar contraseña ──────────────────────────────
-export async function authCambiarPassword(nuevaPassword) {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": `Bearer ${_sessionToken}`,
-    },
-    body: JSON.stringify({ password: nuevaPassword }),
+// ── AUTH: Cambiar contraseña (primer ingreso forzado) ─────
+// Usa la Edge Function con service role para:
+// 1. Actualizar el hash en auth.users (sin restricción de "misma clave")
+// 2. Marcar debe_cambiar_clave = false en terapeutas
+export async function authCambiarPassword(email, nuevaPassword, terapeutaId) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/crear-usuario-auth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "cambiar_clave", email, password: nuevaPassword, terapeuta_id: terapeutaId }),
   });
-  if (!res.ok) throw new Error("No se pudo cambiar la contraseña");
-  return res.json();
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || "No se pudo cambiar la contraseña");
+  return data;
 }
 
 // ── AUTH: Crear usuario via Edge Function (admin only) ───

@@ -1579,8 +1579,7 @@ function CambiarClaveForm({ usuario, onCambiado }) {
     if (nueva === "123456") { setError("Debés establecer una contraseña personal, no la clave inicial."); return; }
     setLoading(true);
     try {
-      await authCambiarPassword(nueva);
-      await dbUpdate("terapeutas", usuario.id, { debe_cambiar_clave: false, password_text: nueva });
+      await authCambiarPassword(usuario.email, nueva, usuario.id);
       onCambiado({ ...usuario, debe_cambiar_clave: false, password_text: nueva });
     } catch(err) {
       setError(err.message || "Error al cambiar la contraseña.");

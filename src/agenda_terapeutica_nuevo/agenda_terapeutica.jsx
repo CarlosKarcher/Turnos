@@ -155,7 +155,10 @@ const CSS = `
   .w-header{position:sticky;top:0;z-index:10;background:var(--surface2);padding:10px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;border-bottom:1px solid var(--border);}
   .w-header.hoy{color:var(--accent2);}
   .t-slot{border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:52px;position:relative;cursor:pointer;transition:background .15s;}
-  .t-slot:hover{background:rgba(124,111,219,.05);}
+  .t-slot.pasado{background:rgba(180,180,180,.06);cursor:default;}
+  .t-slot.activo{background:rgba(34,197,94,.08);}
+  .t-slot.activo:hover{background:rgba(34,197,94,.18);}
+  .t-slot.pasado:hover{background:rgba(180,180,180,.06);}
   .t-label{font-size:10px;color:var(--text2);text-align:right;padding:3px 6px 0 0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);min-height:52px;}
   .ses-chip{position:absolute;left:2px;right:2px;top:2px;border-radius:6px;padding:3px 6px;font-size:11px;font-weight:600;cursor:pointer;z-index:10;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;transition:transform .15s;}
   .ses-chip:hover{transform:scale(1.02);}
@@ -625,7 +628,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
             {dias.map((d,di)=>{
               const ss=getSes(d,h);
               return (
-                <div key={`${h}${di}`} className="t-slot" onClick={()=>{ if(d<hoy) return; onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`); }}>
+                <div key={`${h}${di}`} className={`t-slot ${d<hoy?"pasado":"activo"}`} onClick={()=>{ if(d<hoy) return; onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`); }}>
                   {ss.map(s=>{
                     const sv=servMap[s.servicio_id];
                     return (

@@ -809,8 +809,11 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
               <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border)"}}>
                 <div style={{width:3,height:40,borderRadius:2,background:sv?.color||"var(--accent)",flexShrink:0}}/>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:600,fontSize:14}}>{s.cliente_nombre}</div>
-                  <div style={{fontSize:12,color:"var(--text2)"}}>{sv?.nombre} - {formatFecha(s.fecha_inicio)} {formatHora(s.fecha_inicio)}</div>
+                  <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap"}}>
+                    <span style={{fontWeight:700,fontSize:16}}>{s.cliente_nombre}</span>
+                    <span style={{fontWeight:600,fontSize:16,color:sv?.color||"var(--accent2)"}}>{formatFecha(s.fecha_inicio)} {formatHora(s.fecha_inicio)}</span>
+                  </div>
+                  <div style={{fontSize:12,color:"var(--text2)",marginTop:2}}>{sv?.nombre}</div>
                 </div>
                 {esAdmin && (
                   <div className="avatar" style={{width:30,height:30,fontSize:11,background:(tr?.color||"#6366f1")+"33",color:tr?.color||"#a5b4fc"}}>{tr?.nombre?.[0]}</div>

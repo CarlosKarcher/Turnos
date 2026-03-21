@@ -963,6 +963,15 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
     s.terapeuta_id===sel.terapeuta_id
   ):[];
 
+  async function eliminarCliente(c){
+    if(!window.confirm(`¿Eliminar a ${c.nombre}? Esta acción no se puede deshacer.`)) return;
+    try {
+      await dbDelete("clientes", c.id);
+      setClientes(cs=>cs.filter(x=>x.id!==c.id));
+      if(sel?.id===c.id) setSel(null);
+    } catch(e){ alert("Error al eliminar cliente: " + e.message); }
+  }
+
   async function guardarCliente(id, datos){
     if(!id){
       // NUEVO cliente
@@ -1024,7 +1033,10 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
                     <td style={{fontSize:12,color:"var(--text2)"}}>{c.telefono}<br/>{c.email}</td>
                     <td style={{textAlign:"center"}}><span style={{fontWeight:700,color:"var(--accent2)"}}>{tot}</span></td>
                     <td onClick={e=>e.stopPropagation()}>
-                      <button className="btn btn-sm btn-ghost" style={{padding:"4px 10px",fontSize:12}} onClick={()=>setEditando(c)}>Editar</button>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <button className="btn btn-sm btn-ghost" style={{padding:"4px 10px",fontSize:12}} onClick={()=>setEditando(c)}>Editar</button>
+                        <button title="Eliminar cliente" onClick={()=>eliminarCliente(c)} style={{background:"transparent",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:6,color:"#f87171",fontSize:16,lineHeight:1}} onMouseEnter={e=>e.currentTarget.style.background="#f8717122"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>🗑️</button>
+                      </div>
                     </td>
                   </tr>
                 );

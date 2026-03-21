@@ -14,6 +14,23 @@ const formatFecha = d  => { const x=new Date(d); return `${DIAS[x.getDay()]} ${x
 const addMinutes  = (d,m) => new Date(new Date(d).getTime()+m*60000);
 const calcFin     = (h,m) => h ? addMinutes(new Date(`2000-01-01T${h}`),m).toTimeString().slice(0,5) : "";
 
+// ── MODAL CONFIRMAR ──────────────────────────────────────
+function ModalConfirmar({ titulo, mensaje, labelSi="Eliminar", onSi, onNo }) {
+  return (
+    <div className="modal-overlay" style={{zIndex:9999}} onClick={onNo}>
+      <div className="modal" style={{maxWidth:380,textAlign:"center",padding:"32px 28px"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:40,marginBottom:12}}>🗑️</div>
+        <h3 style={{fontFamily:"'DM Serif Display',serif",fontSize:20,marginBottom:8,color:"var(--text)"}}>{titulo}</h3>
+        <p style={{fontSize:14,color:"var(--text2)",marginBottom:24,lineHeight:1.5}}>{mensaje}</p>
+        <div style={{display:"flex",gap:12,justifyContent:"center"}}>
+          <button className="btn btn-ghost" style={{minWidth:100}} onClick={onNo}>Cancelar</button>
+          <button className="btn" style={{minWidth:100,background:"#ef4444",color:"#fff",border:"none"}} onClick={onSi}>{labelSi}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── DATOS MOCK ────────────────────────────────────────────
 const USUARIOS_MOCK = [
   { id:"u0", nombre:"Admin Sistema",  email:"admin@sentir.fun",    rol:"admin",      password:"admin123",  color:"#f59e0b", activo:true, especialidades:[], descripcion:"Administrador del sistema" },
@@ -946,6 +963,7 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
   const [filtroTer,setFiltroTer]=useState("todos");
   const [sel,setSel]=useState(null);
   const [editando,setEditando]=useState(null);
+  const [confirmar,setConfirmar]=useState(null);
 
   useEffect(()=>{
     if(altaClienteTrigger>0) setEditando({_nuevo:true});
@@ -963,13 +981,19 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
     s.terapeuta_id===sel.terapeuta_id
   ):[];
 
-  async function eliminarCliente(c){
-    if(!window.confirm(`¿Eliminar a ${c.nombre}? Esta acción no se puede deshacer.`)) return;
-    try {
-      await dbDelete("clientes", c.id);
-      setClientes(cs=>cs.filter(x=>x.id!==c.id));
-      if(sel?.id===c.id) setSel(null);
-    } catch(e){ alert("Error al eliminar cliente: " + e.message); }
+  function eliminarCliente(c){
+    setConfirmar({
+      titulo: `¿Eliminar a ${c.nombre}?`,
+      mensaje: "Esta acción no se puede deshacer. El cliente será eliminado del sistema.",
+      onSi: async()=>{
+        setConfirmar(null);
+        try {
+          await dbDelete("clientes", c.id);
+          setClientes(cs=>cs.filter(x=>x.id!==c.id));
+          if(sel?.id===c.id) setSel(null);
+        } catch(e){ alert("Error al eliminar cliente: " + e.message); }
+      }
+    });
   }
 
   async function guardarCliente(id, datos){
@@ -1097,6 +1121,14 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
           onGuardar={guardarCliente}
         />
       )}
+      {confirmar && (
+        <ModalConfirmar
+          titulo={confirmar.titulo}
+          mensaje={confirmar.mensaje}
+          onSi={confirmar.onSi}
+          onNo={()=>setConfirmar(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1109,6 +1141,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
   const [editando,setEditando]=useState(null);
   const [form,setForm]=useState({nombre:"",email:"",password_text:"",especialidades:"",color:"#6366f1",descripcion:"",activo:true});
   const [verPass,setVerPass]=useState(false);
+  const [confirmar,setConfirmar]=useState(null);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const terapeutas=usuarios.filter(u=>u.rol==="terapeuta" || u.es_terapeuta===true);
 
@@ -1160,12 +1193,18 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
     } catch(e){ alert("Error al actualizar: " + e.message); }
   }
 
-  async function eliminarTerapeuta(t){
-    if(!window.confirm(`¿Eliminar a "${t.nombre}"? Esta acción no se puede deshacer.`)) return;
-    try {
-      await dbDelete("terapeutas", t.id);
-      setUsuarios(us=>us.filter(u=>u.id!==t.id));
-    } catch(e){ alert("Error al eliminar: " + e.message); }
+  function eliminarTerapeuta(t){
+    setConfirmar({
+      titulo:`¿Eliminar a ${t.nombre}?`,
+      mensaje:"El terapeuta será eliminado del sistema. Sus sesiones y clientes quedarán sin terapeuta asignado.",
+      onSi: async()=>{
+        setConfirmar(null);
+        try {
+          await dbDelete("terapeutas", t.id);
+          setUsuarios(us=>us.filter(u=>u.id!==t.id));
+        } catch(e){ alert("Error al eliminar: " + e.message); }
+      }
+    });
   }
 
   return (
@@ -1291,6 +1330,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
           </div>
         </div>
       )}
+      {confirmar && <ModalConfirmar titulo={confirmar.titulo} mensaje={confirmar.mensaje} onSi={confirmar.onSi} onNo={()=>setConfirmar(null)}/>}
     </div>
   );
 }
@@ -1335,23 +1375,25 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
     } catch(e){ alert("Error al actualizar terapia: " + e.message); }
   }
 
-  async function eliminar(s, qty){
+  const [confirmarServ, setConfirmarServ]=useState(null);
+
+  function eliminar(s, qty){
     if(qty>0){ alert(`No se puede eliminar "${s.nombre}" porque tiene ${qty} sesion/es registradas.`); return; }
-    if(!window.confirm(`¿Eliminar "${s.nombre}"?`)) return;
-    try {
-      await dbDelete("servicios", s.id);
-      setServicios(ss=>ss.filter(x=>x.id!==s.id));
-    } catch(e){ alert("Error al eliminar terapia: " + e.message); }
+    setConfirmarServ({
+      titulo:`¿Eliminar "${s.nombre}"?`,
+      mensaje:"La terapia será eliminada permanentemente.",
+      onSi: async()=>{ setConfirmarServ(null); try{ await dbDelete("servicios",s.id); setServicios(ss=>ss.filter(x=>x.id!==s.id)); }catch(e){alert("Error: "+e.message);} }
+    });
   }
 
-  async function limpiarNoUsadas(){
+  function limpiarNoUsadas(){
     const noUsadas=servicios.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length===0);
     if(noUsadas.length===0){ alert("No hay terapias sin usar."); return; }
-    if(!window.confirm(`¿Eliminar ${noUsadas.length} terapia/s sin sesiones?`)) return;
-    try {
-      for(const s of noUsadas){ await dbDelete("servicios", s.id); }
-      setServicios(ss=>ss.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length>0));
-    } catch(e){ alert("Error al limpiar terapias: " + e.message); }
+    setConfirmarServ({
+      titulo:`¿Eliminar ${noUsadas.length} terapia/s sin sesiones?`,
+      mensaje:"Se eliminarán todas las terapias que no tienen sesiones registradas.",
+      onSi: async()=>{ setConfirmarServ(null); try{ for(const s of noUsadas){ await dbDelete("servicios",s.id); } setServicios(ss=>ss.filter(s=>(sesiones||[]).filter(x=>x.servicio_id===s.id).length>0)); }catch(e){alert("Error: "+e.message);} }
+    });
   }
 
   return (
@@ -1449,6 +1491,7 @@ function AdminServicios({ servicios, setServicios, sesiones }) {
           </div>
         </div>
       )}
+      {confirmarServ && <ModalConfirmar titulo={confirmarServ.titulo} mensaje={confirmarServ.mensaje} onSi={confirmarServ.onSi} onNo={()=>setConfirmarServ(null)}/>}
     </div>
   );
 }
@@ -1693,6 +1736,7 @@ export default function AgendaTerapeutica() {
   const [sesVista,  setSesVista]  = useState(null);
   const [editando,  setEditando]  = useState(null);
   const [altaClienteTrigger, setAltaClienteTrigger] = useState(0);
+  const [confirmarGlobal, setConfirmarGlobal] = useState(null);
   const [cargando,  setCargando]  = useState(true);  // carga inicial
 
   // ── Restaurar sesión al montar ───────────────────────
@@ -1787,13 +1831,19 @@ export default function AgendaTerapeutica() {
     } catch(e){ alert("Error al cambiar estado: " + e.message); }
   }
 
-  async function eliminarSesion(id){
-    if(!window.confirm("¿Eliminar esta sesion? Esta acción no se puede deshacer.")) return;
-    try {
-      await dbDelete("sesiones", id);
-      setSesiones(ss=>ss.filter(s=>s.id!==id));
-      setSesVista(null);
-    } catch(e){ alert("Error al eliminar sesión: " + e.message); }
+  function eliminarSesion(id){
+    setConfirmarGlobal({
+      titulo:"¿Eliminar esta sesión?",
+      mensaje:"La sesión será eliminada permanentemente del sistema.",
+      onSi: async()=>{
+        setConfirmarGlobal(null);
+        try {
+          await dbDelete("sesiones", id);
+          setSesiones(ss=>ss.filter(s=>s.id!==id));
+          setSesVista(null);
+        } catch(e){ alert("Error al eliminar sesión: " + e.message); }
+      }
+    });
   }
 
   async function handleLogout(){
@@ -1916,6 +1966,8 @@ export default function AgendaTerapeutica() {
           onEliminar={eliminarSesion}
         />
       )}
+
+      {confirmarGlobal && <ModalConfirmar titulo={confirmarGlobal.titulo} mensaje={confirmarGlobal.mensaje} onSi={confirmarGlobal.onSi} onNo={()=>setConfirmarGlobal(null)}/>}
 
       {/* Modal forzar cambio de clave — primer ingreso */}
       {usuario.debe_cambiar_clave && (

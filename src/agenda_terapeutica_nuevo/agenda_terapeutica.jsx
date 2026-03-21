@@ -596,7 +596,10 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
     const h=new Date(); h.setHours(0,0,0,0);
     const l=new Date(h); l.setDate(h.getDate()-((h.getDay()+6)%7)); return l;
   });
-  const horas = Array.from({length:14},(_,i)=>i+8);
+  const cfg = (() => { try { return JSON.parse(localStorage.getItem("sentir_config")||"{}"); } catch{ return {}; }})();
+  const hIni = cfg.horaInicio ?? 8;
+  const hFin  = cfg.horaFin  ?? 21;
+  const horas = Array.from({length: hFin - hIni + 1}, (_,i) => i + hIni);
   const dias  = Array.from({length:7},(_,i)=>{ const d=new Date(lunes); d.setDate(lunes.getDate()+i); return d; });
   const hoy   = new Date(); hoy.setHours(0,0,0,0);
   const nav   = d=>setLunes(l=>{ const n=new Date(l); n.setDate(l.getDate()+d*7); return n; });

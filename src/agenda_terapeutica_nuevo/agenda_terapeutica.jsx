@@ -692,7 +692,7 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
   const filtradas=sesiones
     .filter(s=>filtro==="todas"||s.estado===filtro)
     .filter(s=>!busqueda||s.cliente_nombre?.toLowerCase().includes(busqueda.toLowerCase()))
-    .sort((a,b)=>new Date(b.fecha_inicio)-new Date(a.fecha_inicio));
+    .sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
 
   return (
     <div>

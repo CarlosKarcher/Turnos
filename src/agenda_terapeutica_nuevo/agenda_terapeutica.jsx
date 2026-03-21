@@ -740,6 +740,7 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
 //  DASHBOARD
 // ══════════════════════════════════════════════════════════
 function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual }) {
+  const esAdmin = usuarioActual?.rol==="admin";
   const hoy=new Date(); hoy.setHours(0,0,0,0);
   const fin14=new Date(hoy); fin14.setDate(hoy.getDate()+14);
   const sesHoy    =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime(); });
@@ -749,6 +750,17 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terMap =Object.fromEntries(terapeutas.map(t=>[t.id,t]));
 
+  // Clientes: solo los del terapeuta si no es admin
+  const misClientes = esAdmin
+    ? clientes
+    : clientes.filter(c=>c.terapeuta_id===usuarioActual?.id);
+
+  // Terapias: solo las especialidades del terapeuta si no es admin
+  const misEsp = usuarioActual?.especialidades||[];
+  const misTerapias = esAdmin
+    ? servicios
+    : servicios.filter(sv=> misEsp.some(e=>e.toLowerCase()===sv.nombre.toLowerCase()));
+
   return (
     <div>
       <div className="stats-grid">
@@ -756,7 +768,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
           {label:"Sesiones hoy",val:sesHoy.length,    c:"var(--accent)"},
           {label:"Esta semana",      val:sesSemana.length, c:"var(--accent2)"},
           {label:"Completadas", val:completadas,       c:"var(--success)"},
-          {label:"Clientes",    val:clientes.length,   c:"var(--gold)"},
+          {label:"Clientes",    val:misClientes.length, c:"var(--gold)"},
         ].map((s,i)=>(
           <div key={i} className="stat-card" style={{"--c":s.c}}>
             <div className="stat-value">{s.val}</div>
@@ -765,7 +777,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
         ))}
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr",gap:20}}>
+      <div style={{display:"grid",gridTemplateColumns: misTerapias.length>1?"1.2fr 0.8fr":"1fr",gap:20}}>
         <div className="card">
           <div className="card-title">Proximas sesiones</div>
           {proximas.length===0 && <div style={{color:"var(--text2)",fontSize:13}}>Sin sesiones proximas</div>}
@@ -779,31 +791,33 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
                   <div style={{fontWeight:600,fontSize:14}}>{s.cliente_nombre}</div>
                   <div style={{fontSize:12,color:"var(--text2)"}}>{sv?.nombre} - {formatFecha(s.fecha_inicio)} {formatHora(s.fecha_inicio)}</div>
                 </div>
-                {usuarioActual.rol==="admin" && (
+                {esAdmin && (
                   <div className="avatar" style={{width:30,height:30,fontSize:11,background:(tr?.color||"#6366f1")+"33",color:tr?.color||"#a5b4fc"}}>{tr?.nombre?.[0]}</div>
                 )}
               </div>
             );
           })}
         </div>
-        <div className="card">
-          <div className="card-title">Terapias mas solicitadas</div>
-          {servicios.map(sv=>{
-            const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
-            const max=Math.max(...servicios.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
-            return (
-              <div key={sv.id} style={{marginBottom:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}>
-                  <span style={{color:sv.color,fontWeight:600}}>{sv.nombre}</span>
-                  <span style={{color:"var(--text2)"}}>{qty}</span>
+        {misTerapias.length>1 && (
+          <div className="card">
+            <div className="card-title">Terapias mas solicitadas</div>
+            {misTerapias.map(sv=>{
+              const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
+              const max=Math.max(...misTerapias.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
+              return (
+                <div key={sv.id} style={{marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}>
+                    <span style={{color:sv.color,fontWeight:600}}>{sv.nombre}</span>
+                    <span style={{color:"var(--text2)"}}>{qty}</span>
+                  </div>
+                  <div style={{height:5,background:"var(--surface2)",borderRadius:3,overflow:"hidden"}}>
+                    <div style={{width:`${(qty/max)*100}%`,height:"100%",background:sv.color,borderRadius:3,transition:"width .6s"}}/>
+                  </div>
                 </div>
-                <div style={{height:5,background:"var(--surface2)",borderRadius:3,overflow:"hidden"}}>
-                  <div style={{width:`${(qty/max)*100}%`,height:"100%",background:sv.color,borderRadius:3,transition:"width .6s"}}/>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

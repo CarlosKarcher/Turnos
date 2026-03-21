@@ -1202,7 +1202,10 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
       {modal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModal(false)}>
           <div className="modal">
-            <h2 className="modal-title">{editando?"Editar terapeuta":"Nuevo terapeuta"}</h2>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <h2 className="modal-title" style={{marginBottom:0}}>{editando?"Editar terapeuta":"Nuevo terapeuta"}</h2>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setModal(false)} style={{fontSize:18,lineHeight:1,padding:"2px 8px"}}>×</button>
+            </div>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Nombre completo</label>

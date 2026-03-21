@@ -1197,16 +1197,22 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
   }
 
   function eliminarTerapeuta(t){
-    const cantSesiones = sesiones.filter(s=>s.terapeuta_id===t.id).length;
-    const aviso = cantSesiones > 0
-      ? `Tiene ${cantSesiones} sesión/es registrada/s que quedarán sin terapeuta asignado.`
-      : "No tiene sesiones registradas.";
+    const ahora = new Date();
+    const sesFuturas = sesiones.filter(s=>s.terapeuta_id===t.id && new Date(s.fecha_inicio)>ahora && s.estado!=="cancelado");
+    const aviso = sesFuturas.length > 0
+      ? `Sus ${sesFuturas.length} sesión/es futuras serán canceladas. Los clientes quedarán en el sistema sin terapeuta asignado.`
+      : "No tiene sesiones futuras. Los clientes quedarán en el sistema sin terapeuta asignado.";
     setConfirmar({
       titulo:`¿Eliminar a ${t.nombre}?`,
       mensaje:`${aviso} Esta acción no se puede deshacer.`,
       onSi: async()=>{
         setConfirmar(null);
         try {
+          // Cancelar sesiones futuras
+          for(const s of sesFuturas){
+            await actualizarSesion(s.id, {estado:"cancelado"});
+          }
+          // Eliminar terapeuta (clientes quedan con SET NULL por FK)
           await dbDelete("terapeutas", t.id);
           setUsuarios(us=>us.filter(u=>u.id!==t.id));
         } catch(e){ alert("Error al eliminar: " + e.message); }

@@ -684,7 +684,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
 //  LISTA SESIONES
 // ══════════════════════════════════════════════════════════
 function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, onCambiarEstado, onEliminar }) {
-  const [filtro,setFiltro]   = useState("todas");
+  const [filtro,setFiltro]   = useState("confirmado");
   const [busqueda,setBusqueda]=useState("");
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terMap =Object.fromEntries(terapeutas.map(t=>[t.id,t]));

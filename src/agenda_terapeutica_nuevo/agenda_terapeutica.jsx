@@ -605,6 +605,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
 
   function getSes(dia,hora){
     return sesiones.filter(s=>{
+      if(s.estado==="cancelado") return false;
       const f=new Date(s.fecha_inicio);
       return f.getFullYear()===dia.getFullYear()&&f.getMonth()===dia.getMonth()&&f.getDate()===dia.getDate()&&f.getHours()===hora;
     });
@@ -641,10 +642,10 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
                     const hFin=s.fecha_fin?new Date(s.fecha_fin).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}):"";
                     return (
                       <div key={s.id} className="ses-chip"
-                        style={{background:"#fff",color:"#111",borderLeft:`4px solid ${tc}`}}
+                        style={{background:"#fff",color:"#111",borderLeft:`4px solid ${tc}`,display:"flex",flexDirection:"column",gap:1,padding:"3px 5px"}}
                         onClick={e=>{e.stopPropagation();onVer(s);}}>
-                        <span style={{fontSize:10,fontWeight:700,color:tc}}>{hIni}{hFin?` – ${hFin}`:""}</span>
-                        <span style={{marginLeft:4}}>{s.cliente_nombre} - {sv?.nombre}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:"#111",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.cliente_nombre||"Sin nombre"}</span>
+                        <span style={{fontSize:10,color:tc,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{hIni}{hFin?` – ${hFin}`:""} · {sv?.nombre}</span>
                       </div>
                     );
                   })}

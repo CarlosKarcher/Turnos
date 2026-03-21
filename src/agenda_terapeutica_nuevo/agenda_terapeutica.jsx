@@ -1889,7 +1889,7 @@ export default function AgendaTerapeutica() {
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <h1>🌿 Sentir</h1>
+          <h1 style={{display:"flex",alignItems:"center",gap:6}}><img src="/Logo.png" alt="" style={{width:28,height:28,objectFit:"contain"}}/> Sentir</h1>
           <p>Agenda Terapéutica</p>
         </div>
         <div className="sidebar-user">

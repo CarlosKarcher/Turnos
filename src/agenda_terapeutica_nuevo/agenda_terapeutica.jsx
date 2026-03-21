@@ -744,7 +744,7 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
   const esAdmin = usuarioActual?.rol==="admin";
   const hoy=new Date(); hoy.setHours(0,0,0,0);
   const fin14=new Date(hoy); fin14.setDate(hoy.getDate()+14);
-  const sesHoy    =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime(); });
+  const sesHoy    =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); f.setHours(0,0,0,0); return f.getTime()===hoy.getTime()&&s.estado!=="cancelado"; });
   const sesSemana =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; });
   const proximas  =sesiones.filter(s=>{ const f=new Date(s.fecha_inicio); return f>=hoy&&f<=fin14&&s.estado!=="cancelado"; }).sort((a,b)=>new Date(a.fecha_inicio)-new Date(b.fecha_inicio));
   const completadas=sesiones.filter(s=>s.estado==="completado").length;

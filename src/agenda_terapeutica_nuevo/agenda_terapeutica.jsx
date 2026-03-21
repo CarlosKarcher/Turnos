@@ -1197,9 +1197,13 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
   }
 
   function eliminarTerapeuta(t){
+    const cantSesiones = sesiones.filter(s=>s.terapeuta_id===t.id).length;
+    const aviso = cantSesiones > 0
+      ? `Tiene ${cantSesiones} sesión/es registrada/s que quedarán sin terapeuta asignado.`
+      : "No tiene sesiones registradas.";
     setConfirmar({
       titulo:`¿Eliminar a ${t.nombre}?`,
-      mensaje:"El terapeuta será eliminado del sistema. Sus sesiones y clientes quedarán sin terapeuta asignado.",
+      mensaje:`${aviso} Esta acción no se puede deshacer.`,
       onSi: async()=>{
         setConfirmar(null);
         try {

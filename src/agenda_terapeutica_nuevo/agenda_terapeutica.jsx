@@ -519,11 +519,11 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
         <div style={{display:"flex",gap:8,marginBottom:20,alignItems:"center"}}>
           <button className={`btn btn-sm ${paso===1?"btn-primary":"btn-ghost"}`} onClick={()=>setPaso(1)}>1. Datos</button>
           <button className="btn btn-sm btn-ghost" style={{opacity:.4,cursor:"not-allowed"}} disabled>2. Anamnesis IA</button>
-          <div style={{marginLeft:"auto",display:"flex",gap:12,alignItems:"center"}}>
-            <span style={{fontSize:13,color:"var(--text2)",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+            <span style={{fontSize:10,color:"var(--text2)",textTransform:"uppercase",letterSpacing:1}}>Terapeuta</span>
+            <span style={{fontSize:13,fontWeight:600,background:"var(--primary)",color:"#fff",borderRadius:6,padding:"3px 12px",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
               {(terapeutas.find(t=>t.id===form.terapeuta_id)?.nombre || usuarioActual?.nombre || "").slice(0,25)}
             </span>
-            <span className={`badge badge-${form.estado}`}>{form.estado}</span>
           </div>
         </div>
 

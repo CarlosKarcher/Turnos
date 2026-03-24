@@ -980,6 +980,7 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
   async function guardar(){
     if(guardando) return;                                      // guard doble clic
     if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
+    if(!form.telefono.trim()){ alert("El teléfono es obligatorio"); return; }
     setGuardando(true);
     const { tel_prefijo, ...formSinPrefijo } = form;
     const datos={

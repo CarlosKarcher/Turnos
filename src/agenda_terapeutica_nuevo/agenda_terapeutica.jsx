@@ -976,11 +976,13 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
   });
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
   const [guardando,setGuardando]=useState(false);
+  const [errorForm,setErrorForm]=useState("");
 
   async function guardar(){
     if(guardando) return;                                      // guard doble clic
-    if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
-    if(!form.telefono.trim()){ alert("El teléfono es obligatorio"); return; }
+    if(!form.nombre.trim()){ setErrorForm("⚠️ El nombre del cliente es obligatorio."); return; }
+    if(!form.telefono.trim()){ setErrorForm("📱 El teléfono es obligatorio — se usa para identificar al cliente y evitar duplicados."); return; }
+    setErrorForm("");
     setGuardando(true);
     const { tel_prefijo, ...formSinPrefijo } = form;
     const datos={
@@ -1058,6 +1060,11 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
             <textarea className="form-input" rows={2} style={{padding:"7px 10px",resize:"vertical"}} value={form.notas} onChange={e=>set("notas",e.target.value)} />
           </div>
         </div>
+        {errorForm && (
+          <div style={{background:"#3b1a1a",border:"1px solid #e53e3e",borderRadius:8,padding:"10px 14px",marginTop:8,color:"#fc8181",fontSize:13,fontWeight:500}}>
+            {errorForm}
+          </div>
+        )}
         <div className="form-actions" style={{marginTop:10}}>
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" onClick={guardar} disabled={guardando}>{guardando?"Guardando...":"Guardar cambios"}</button>

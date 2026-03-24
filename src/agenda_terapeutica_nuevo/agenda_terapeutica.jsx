@@ -590,13 +590,6 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
                 <input className="form-input" readOnly style={{opacity:.6}} value={calcFin(form.hora,form.duracion_minutos)} />
               </div>
             </div>
-            {form.hora && (
-              <div className="horario-box">
-                <span style={{color:"var(--text2)"}}>Horario:</span>
-                <strong style={{color:"var(--accent2)"}}>{form.hora} - {calcFin(form.hora,form.duracion_minutos)}</strong>
-                <span style={{color:"var(--text2)"}}>({form.duracion_minutos} min - {serv?.nombre})</span>
-              </div>
-            )}
 
             <hr style={{border:"none",borderTop:"1px solid var(--border)",margin:"4px 0 18px"}} />
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   authLogin, authLogout, authRestoreSession, authCambiarPassword, crearUsuarioAuth,
+  authLoginWithGoogle, authHandleOAuthCallback, verificarEmailTerapeuta,
   getSesiones, crearSesion, actualizarSesion,
   getServicios, getTerapeutas, getClientes, getPerfilUsuario,
   dbSelect, dbInsert, dbUpdate, dbDelete
@@ -13,6 +14,19 @@ const formatHora  = d  => new Date(d).toLocaleTimeString("es-AR",{hour:"2-digit"
 const formatFecha = d  => { const x=new Date(d); return `${DIAS[x.getDay()]} ${x.getDate()} ${MESES[x.getMonth()]}`; };
 const addMinutes  = (d,m) => new Date(new Date(d).getTime()+m*60000);
 const calcFin     = (h,m) => h ? addMinutes(new Date(`2000-01-01T${h}`),m).toTimeString().slice(0,5) : "";
+
+// ── AVISO DE ACCIÓN ──────────────────────────────────────
+function ModalAviso({ icono, mensaje, onCerrar }) {
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:99999,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{background:"var(--card,#1e1e2e)",border:"1px solid var(--border,#333)",borderRadius:16,padding:"36px 40px",maxWidth:420,width:"90%",textAlign:"center",boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
+        <div style={{fontSize:52,marginBottom:16}}>{icono}</div>
+        <p style={{fontSize:17,color:"var(--text,#fff)",fontWeight:500,marginBottom:28,lineHeight:1.5}}>{mensaje}</p>
+        <button className="btn" style={{minWidth:140,fontSize:15}} onClick={onCerrar}>Continuar</button>
+      </div>
+    </div>
+  );
+}
 
 // ── MODAL CONFIRMAR ──────────────────────────────────────
 function ModalConfirmar({ titulo, mensaje, labelSi="Eliminar", onSi, onNo }) {
@@ -194,6 +208,88 @@ const CSS = `
 // ══════════════════════════════════════════════════════════
 //  LOGIN
 // ══════════════════════════════════════════════════════════
+//  PANTALLA DE ACCESO (verifica email antes de ir a Google)
+// ══════════════════════════════════════════════════════════
+function PantallaAcceso({ noAutorizado: noAutorizadoInicial }) {
+  const [email,       setEmail]       = useState("");
+  const [estado,      setEstado]      = useState(noAutorizadoInicial ? "no_autorizado" : "idle"); // idle | verificando | no_autorizado
+  const [loading,     setLoading]     = useState(false);
+
+  async function handleVerificar(e) {
+    e.preventDefault();
+    const mail = email.trim().toLowerCase();
+    if (!mail) return;
+    setLoading(true);
+    try {
+      const existe = await verificarEmailTerapeuta(mail);
+      if (existe) {
+        authLoginWithGoogle(mail); // redirige a Google con email pre-cargado
+      } else {
+        setEstado("no_autorizado");
+      }
+    } catch { setEstado("no_autorizado"); }
+    setLoading(false);
+  }
+
+  const MsgNoAutorizado = () => (
+    <div style={{textAlign:"center",color:"var(--text2)",padding:32,maxWidth:420}}>
+      <div style={{fontSize:52,marginBottom:16}}>🔒</div>
+      <div style={{fontSize:20,color:"var(--text1)",fontWeight:600,marginBottom:10}}>No estás identificado en Turnos</div>
+      <div style={{fontSize:14,lineHeight:1.7,marginBottom:28}}>
+        Tu cuenta no está registrada en el sistema.<br/>
+        Para obtener acceso, contactá al Administrador.
+      </div>
+      <a href="https://wa.me/542966211547" target="_blank" rel="noopener noreferrer"
+        style={{display:"inline-flex",alignItems:"center",gap:10,padding:"12px 24px",
+          borderRadius:10,background:"#25D366",color:"#fff",fontWeight:600,fontSize:15,
+          textDecoration:"none",marginBottom:20}}>
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="white">
+          <path d="M16 2C8.28 2 2 8.28 2 16c0 2.47.67 4.79 1.83 6.78L2 30l7.44-1.79A13.94 13.94 0 0 0 16 30c7.72 0 14-6.28 14-14S23.72 2 16 2zm0 25.5a11.44 11.44 0 0 1-5.84-1.6l-.42-.25-4.34 1.04 1.08-4.22-.28-.44A11.47 11.47 0 0 1 4.5 16C4.5 9.6 9.6 4.5 16 4.5S27.5 9.6 27.5 16 22.4 27.5 16 27.5zm6.27-8.47c-.34-.17-2.02-1-2.34-1.11-.32-.11-.55-.17-.78.17-.23.34-.89 1.11-1.09 1.34-.2.23-.4.26-.74.09-.34-.17-1.44-.53-2.74-1.69-1.01-.9-1.7-2.01-1.9-2.35-.2-.34-.02-.52.15-.69.15-.15.34-.4.51-.6.17-.2.23-.34.34-.57.11-.23.06-.43-.03-.6-.09-.17-.78-1.88-1.07-2.57-.28-.67-.57-.58-.78-.59h-.66c-.23 0-.6.09-.91.43-.31.34-1.19 1.16-1.19 2.83s1.22 3.28 1.39 3.51c.17.23 2.4 3.67 5.82 5.14.81.35 1.45.56 1.94.72.82.26 1.56.22 2.15.13.66-.1 2.02-.83 2.31-1.62.28-.8.28-1.48.2-1.62-.09-.14-.32-.23-.66-.4z"/>
+        </svg>
+        Contactar al Administrador
+      </a>
+      <br/>
+      <button style={{background:"none",border:"none",color:"var(--text2)",fontSize:12,cursor:"pointer",textDecoration:"underline",marginTop:8}}
+        onClick={()=>setEstado("idle")}>
+        Intentar con otro email
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="login-wrap">
+      <div className="login-box">
+        <div className="login-logo">🌿 Agenda Terapeutica</div>
+        <div className="login-sub">Sistema de gestion terapeutica</div>
+        {estado === "no_autorizado" ? <MsgNoAutorizado/> : (
+          <form onSubmit={handleVerificar}>
+            <div className="form-group">
+              <label className="form-label">Tu email de Gmail</label>
+              <input className="form-input" type="email" value={email}
+                onChange={e=>setEmail(e.target.value)}
+                placeholder="tu@gmail.com" required autoFocus />
+            </div>
+            <button className="btn btn-primary" style={{width:"100%",justifyContent:"center",display:"flex",alignItems:"center",gap:10}} type="submit" disabled={loading}>
+              {loading ? <><span className="spinner"/> Verificando...</> : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.14 29.5 1 24 1 14.82 1 7.07 6.48 3.64 14.22l7.13 5.54C12.52 13.27 17.79 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.42-4.74H24v9h12.68c-.55 2.97-2.2 5.48-4.68 7.16l7.19 5.59C43.18 37.27 46.52 31.36 46.52 24.5z"/>
+                    <path fill="#FBBC05" d="M10.77 28.24A14.55 14.55 0 0 1 9.5 24c0-1.48.25-2.91.68-4.24l-7.13-5.54A23.94 23.94 0 0 0 0 24c0 3.87.92 7.53 2.55 10.78l8.22-6.54z"/>
+                    <path fill="#34A853" d="M24 47c6.48 0 11.92-2.15 15.89-5.84l-7.19-5.59C30.6 37.25 27.44 38.5 24 38.5c-6.21 0-11.48-3.77-13.23-9.26l-8.22 6.54C6.07 43.52 14.47 47 24 47z"/>
+                  </svg>
+                  Continuar con Google
+                </>
+              )}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
 function Login({ onLogin }) {
   const [email,    setEmail]    = useState("");
   const [pass,     setPass]     = useState("");
@@ -259,6 +355,27 @@ function Login({ onLogin }) {
             <button className="btn btn-primary" style={{width:"100%",justifyContent:"center"}} type="submit" disabled={loading}>
               {loading ? <><span className="spinner"/> Verificando...</> : "Ingresar al sistema"}
             </button>
+
+            <div style={{display:"flex",alignItems:"center",gap:10,margin:"18px 0 4px"}}>
+              <div style={{flex:1,height:1,background:"var(--border)"}}/>
+              <span style={{fontSize:12,color:"var(--text2)",whiteSpace:"nowrap"}}>o continuar con</span>
+              <div style={{flex:1,height:1,background:"var(--border)"}}/>
+            </div>
+
+            <button type="button" onClick={authLoginWithGoogle}
+              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+                padding:"10px 16px",borderRadius:8,border:"1px solid var(--border)",
+                background:"var(--bg2)",color:"var(--text1)",fontSize:14,cursor:"pointer",
+                fontWeight:500,transition:"background .15s"}}>
+              <svg width="18" height="18" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.14 29.5 1 24 1 14.82 1 7.07 6.48 3.64 14.22l7.13 5.54C12.52 13.27 17.79 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.42-4.74H24v9h12.68c-.55 2.97-2.2 5.48-4.68 7.16l7.19 5.59C43.18 37.27 46.52 31.36 46.52 24.5z"/>
+                <path fill="#FBBC05" d="M10.77 28.24A14.55 14.55 0 0 1 9.5 24c0-1.48.25-2.91.68-4.24l-7.13-5.54A23.94 23.94 0 0 0 0 24c0 3.87.92 7.53 2.55 10.78l8.22-6.54z"/>
+                <path fill="#34A853" d="M24 47c6.48 0 11.92-2.15 15.89-5.84l-7.19-5.59C30.6 37.25 27.44 38.5 24 38.5c-6.21 0-11.48-3.77-13.23-9.26l-8.22 6.54C6.07 43.52 14.47 47 24 47z"/>
+              </svg>
+              Continuar con Google
+            </button>
+
             <div style={{textAlign:"center",marginTop:14}}>
               <button type="button" style={{background:"none",border:"none",color:"var(--text2)",fontSize:12,cursor:"pointer",textDecoration:"underline"}}
                 onClick={()=>setReset(true)}>
@@ -395,10 +512,15 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:"var(--text2)",fontSize:22,lineHeight:1,padding:"2px 6px",borderRadius:6,transition:"color .2s"}} title="Cerrar sin guardar" onMouseEnter={e=>e.target.style.color="var(--danger)"} onMouseLeave={e=>e.target.style.color="var(--text2)"}>✕</button>
         </div>
 
-        <div style={{display:"flex",gap:8,marginBottom:20}}>
-          {["1. Datos","2. Anamnesis IA"].map((t,i)=>(
-            <button key={i} className={`btn btn-sm ${paso===i+1?"btn-primary":"btn-ghost"}`} onClick={()=>setPaso(i+1)}>{t}</button>
-          ))}
+        <div style={{display:"flex",gap:8,marginBottom:20,alignItems:"center"}}>
+          <button className={`btn btn-sm ${paso===1?"btn-primary":"btn-ghost"}`} onClick={()=>setPaso(1)}>1. Datos</button>
+          <button className="btn btn-sm btn-ghost" style={{opacity:.4,cursor:"not-allowed"}} disabled>2. Anamnesis IA</button>
+          <div style={{marginLeft:"auto",display:"flex",gap:12,alignItems:"center"}}>
+            <span style={{fontSize:13,color:"var(--text2)",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {(terapeutas.find(t=>t.id===form.terapeuta_id)?.nombre || usuarioActual?.nombre || "").slice(0,25)}
+            </span>
+            <span className={`badge badge-${form.estado}`}>{form.estado}</span>
+          </div>
         </div>
 
         {paso===1 && (
@@ -474,19 +596,6 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
             <hr style={{border:"none",borderTop:"1px solid var(--border)",margin:"4px 0 18px"}} />
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Teléfono</label>
-                <div style={{display:"flex",alignItems:"center",gap:0}}>
-                  <input className="form-input" style={{borderRadius:"10px 0 0 10px",width:68,textAlign:"center",borderRight:"none",padding:"10px 8px"}} value={form.tel_prefijo} onChange={e=>set("tel_prefijo",e.target.value)} placeholder="+54" />
-                  <input className="form-input" style={{borderRadius:"0 10px 10px 0"}} value={form.cliente_telefono} onChange={e=>set("cliente_telefono",e.target.value)} />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input className="form-input" type="email" value={form.cliente_email} onChange={e=>set("cliente_email",e.target.value)} />
-              </div>
-            </div>
             <div className="form-group">
               <label className="form-label">Motivo de consulta</label>
               <textarea className="form-textarea" value={form.motivo_consulta} onChange={e=>set("motivo_consulta",e.target.value)} placeholder="Que trae el cliente?" />
@@ -582,12 +691,6 @@ function ModalDetalle({ sesion, terapeutas, servicios, onClose, onEditar, onComp
             <div style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px"}}>
               <div style={{fontSize:11,color:"var(--text2)",fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Notas</div>
               <div style={{fontSize:13,lineHeight:1.7}}>{sesion.notas_sesion}</div>
-            </div>
-          )}
-          {sesion.anamnesis_ia && (
-            <div className="ia-box">
-              <h4>Analisis IA previo</h4>
-              <div className="ia-resp">{sesion.anamnesis_ia}</div>
             </div>
           )}
         </div>
@@ -961,7 +1064,7 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
 // ══════════════════════════════════════════════════════════
 //  LISTA CLIENTES
 // ══════════════════════════════════════════════════════════
-function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas, usuarioActual, altaClienteTrigger }) {
+function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas, usuarioActual, altaClienteTrigger, onAviso }) {
   const [busqueda,setBusqueda]=useState("");
   const [filtroTer,setFiltroTer]=useState("todos");
   const [sel,setSel]=useState(null);
@@ -984,6 +1087,19 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
     s.terapeuta_id===sel.terapeuta_id
   ):[];
 
+  function mensajeError(e, contexto=""){
+    const msg = e?.message || "";
+    if(msg.includes("clientes_genero_check")) return "Seleccioná un género válido (Femenino o Masculino).";
+    if(msg.includes("violates check constraint")) return "Hay un valor inválido en el formulario. Revisá los campos.";
+    if(msg.includes("duplicate key") || msg.includes("already exists")) return "Ya existe un registro con esos datos.";
+    if(msg.includes("foreign key") || msg.includes("violates foreign key")) return "No se puede realizar esta acción porque hay datos relacionados.";
+    if(msg.includes("not null") || msg.includes("null value")) return "Falta completar un campo obligatorio.";
+    if(msg.includes("network") || msg.includes("fetch")) return "Error de conexión. Verificá tu internet e intentá de nuevo.";
+    if(msg.includes("permission") || msg.includes("policy")) return "No tenés permiso para realizar esta acción.";
+    if(contexto) return `No se pudo ${contexto}. Intentá de nuevo o contactá al administrador.`;
+    return "Ocurrió un error inesperado. Intentá de nuevo.";
+  }
+
   function eliminarCliente(c){
     setConfirmar({
       titulo: `¿Eliminar a ${c.nombre}?`,
@@ -992,27 +1108,37 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
         setConfirmar(null);
         try {
           await dbDelete("clientes", c.id);
-          setClientes(cs=>cs.filter(x=>x.id!==c.id));
+          await recargarClientes();
           if(sel?.id===c.id) setSel(null);
+          onAviso?.({icono:"🗑️", mensaje:`${c.nombre} fue eliminado/a correctamente.`});
         } catch(e){ alert("Error al eliminar cliente: " + e.message); }
       }
     });
+  }
+
+  async function recargarClientes(){
+    try {
+      const clis = await getClientes(usuarioActual.id, usuarioActual.rol);
+      if(clis) setClientes(clis);
+    } catch(e){ console.error("Error recargando clientes:", e.message); }
   }
 
   async function guardarCliente(id, datos){
     if(!id){
       // NUEVO cliente
       try {
-        const nuevo = await dbInsert("clientes", {...datos, terapeuta_id: usuarioActual.id, created_at: new Date().toISOString()});
-        setClientes(cs=>[...cs, nuevo]);
+        await dbInsert("clientes", {...datos, terapeuta_id: usuarioActual.id, created_at: new Date().toISOString()});
+        await recargarClientes();
+        onAviso?.({icono:"✅", mensaje:`${datos.nombre} fue dado/a de alta correctamente.`});
       } catch(e){ alert("Error al guardar cliente: " + e.message); throw e; }
     } else {
       // EDITAR cliente existente
       try {
         await dbUpdate("clientes", id, {...datos, updated_at: new Date().toISOString()});
+        await recargarClientes();
+        setSel(prev=>prev?.id===id?{...prev,...datos}:prev);
+        onAviso?.({icono:"✅", mensaje:`${datos.nombre} fue modificado/a correctamente.`});
       } catch(e){ alert("Error al guardar cliente: " + e.message); throw e; }
-      setClientes(cs=>cs.map(c=>c.id===id?{...c,...datos}:c));
-      setSel(prev=>prev?.id===id?{...prev,...datos}:prev);
     }
   }
 
@@ -1750,24 +1876,46 @@ export default function AgendaTerapeutica() {
   const [editando,  setEditando]  = useState(null);
   const [altaClienteTrigger, setAltaClienteTrigger] = useState(0);
   const [confirmarGlobal, setConfirmarGlobal] = useState(null);
-  const [cargando,  setCargando]  = useState(true);  // carga inicial
+  const [cargando,     setCargando]     = useState(true);
+  const [noAutorizado, setNoAutorizado] = useState(false);
+  const [aviso, setAviso] = useState(null); // {icono, mensaje}
 
   // ── Restaurar sesión al montar ───────────────────────
   useEffect(()=>{
     (async()=>{
       try {
-        const user = await authRestoreSession();
+        let user = await authHandleOAuthCallback();
+        if (!user) user = await authRestoreSession();
         if (user) {
-          const perfil = await getPerfilUsuario(user.id);
+          let perfil = await getPerfilUsuario(user.id);
+          if (!perfil && user.email) {
+            const { dbSelect: db } = await import("../supabase.js");
+            const rows = await db("terapeutas", `?email=eq.${encodeURIComponent(user.email)}&activo=eq.true`);
+            if (rows?.[0]) {
+              perfil = rows[0];
+              await import("../supabase.js").then(m => m.dbUpdate("terapeutas", perfil.id, { auth_user_id: user.id }));
+              perfil.auth_user_id = user.id;
+            }
+          }
           if (perfil?.activo) {
             setUsuario(perfil);
             await cargarDatos(perfil);
+          } else if (user) {
+            await authLogout();
+            setNoAutorizado(true);
           }
         }
       } catch(e){ console.error("Error restaurando sesion:", e); }
       setCargando(false);
     })();
   },[]);
+
+  // ── Redirigir a Google si no hay sesión ni error ──────
+  useEffect(()=>{
+    if (!cargando && !usuario && !noAutorizado) {
+      authLoginWithGoogle();
+    }
+  },[cargando, usuario, noAutorizado]);
 
   // ── Cargar datos desde Supabase ───────────────────────
   async function cargarDatos(u) {
@@ -1805,6 +1953,7 @@ export default function AgendaTerapeutica() {
         const sesConId = Array.isArray(resS) ? resS[0] : resS;
         if(!sesConId?.id){ alert("Error: la sesión no se guardó en la base de datos."); return; }
         setSesiones(ss=>[...ss, sesConId]);
+        setAviso({icono:"✅", mensaje:`La sesión de ${dbDatos.cliente_nombre||"el cliente"} fue dada de alta correctamente.`});
         if(dbDatos.cliente_nombre){
           try {
             const cliExistente = clientes.find(c=>c.nombre===dbDatos.cliente_nombre && c.terapeuta_id===dbDatos.terapeuta_id);
@@ -1830,6 +1979,7 @@ export default function AgendaTerapeutica() {
       } else {
         await actualizarSesion(dbDatos.id, dbDatos);
         setSesiones(ss=>ss.map(s=>s.id===dbDatos.id?{...s,...dbDatos}:s));
+        setAviso({icono:"✅", mensaje:`La sesión de ${dbDatos.cliente_nombre||"el cliente"} fue modificada correctamente.`});
       }
       setModalSes(null); setEditando(null); setSesVista(null);
     } catch(e){
@@ -1854,6 +2004,7 @@ export default function AgendaTerapeutica() {
           await dbDelete("sesiones", id);
           setSesiones(ss=>ss.filter(s=>s.id!==id));
           setSesVista(null);
+          setAviso({icono:"🗑️", mensaje:"La sesión fue eliminada correctamente."});
         } catch(e){ alert("Error al eliminar sesión: " + e.message); }
       }
     });
@@ -1875,9 +2026,43 @@ export default function AgendaTerapeutica() {
     </div></>
   );
 
-  if(!usuario) return (
-    <><style>{CSS}</style><Login onLogin={async u=>{setUsuario(u);await cargarDatos(u);setVista("dashboard");}}/></>
-  );
+  if(!usuario) {
+    if (noAutorizado) return (
+      <><style>{CSS}</style>
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)"}}>
+        <div style={{position:"relative",textAlign:"center",color:"var(--text2)",padding:40,maxWidth:420,
+          background:"var(--card)",borderRadius:16,boxShadow:"0 8px 32px rgba(0,0,0,0.18)"}}>
+          <button onClick={()=>window.close()} title="Cerrar"
+            style={{position:"absolute",top:14,right:14,background:"none",border:"none",
+              fontSize:20,cursor:"pointer",color:"var(--text2)",lineHeight:1}}>✕</button>
+          <div style={{fontSize:52,marginBottom:16}}>🔒</div>
+          <div style={{fontSize:20,color:"var(--text1)",fontWeight:600,marginBottom:10}}>No estás identificado en Turnos</div>
+          <div style={{fontSize:14,lineHeight:1.7,marginBottom:28}}>
+            Tu cuenta no está registrada en el sistema.<br/>
+            Para obtener acceso, contactá al Administrador.
+          </div>
+          <a href="https://wa.me/542966211547" target="_blank" rel="noopener noreferrer"
+            style={{display:"inline-flex",alignItems:"center",gap:10,padding:"12px 24px",
+              borderRadius:10,background:"#25D366",color:"#fff",fontWeight:600,fontSize:15,textDecoration:"none"}}>
+            <svg width="22" height="22" viewBox="0 0 32 32" fill="white">
+              <path d="M16 2C8.28 2 2 8.28 2 16c0 2.47.67 4.79 1.83 6.78L2 30l7.44-1.79A13.94 13.94 0 0 0 16 30c7.72 0 14-6.28 14-14S23.72 2 16 2zm0 25.5a11.44 11.44 0 0 1-5.84-1.6l-.42-.25-4.34 1.04 1.08-4.22-.28-.44A11.47 11.47 0 0 1 4.5 16C4.5 9.6 9.6 4.5 16 4.5S27.5 9.6 27.5 16 22.4 27.5 16 27.5zm6.27-8.47c-.34-.17-2.02-1-2.34-1.11-.32-.11-.55-.17-.78.17-.23.34-.89 1.11-1.09 1.34-.2.23-.4.26-.74.09-.34-.17-1.44-.53-2.74-1.69-1.01-.9-1.7-2.01-1.9-2.35-.2-.34-.02-.52.15-.69.15-.15.34-.4.51-.6.17-.2.23-.34.34-.57.11-.23.06-.43-.03-.6-.09-.17-.78-1.88-1.07-2.57-.28-.67-.57-.58-.78-.59h-.66c-.23 0-.6.09-.91.43-.31.34-1.19 1.16-1.19 2.83s1.22 3.28 1.39 3.51c.17.23 2.4 3.67 5.82 5.14.81.35 1.45.56 1.94.72.82.26 1.56.22 2.15.13.66-.1 2.02-.83 2.31-1.62.28-.8.28-1.48.2-1.62-.09-.14-.32-.23-.66-.4z"/>
+            </svg>
+            Contactar al Administrador
+          </a>
+        </div>
+      </div></>
+    );
+    return (
+      <><style>{CSS}</style>
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)"}}>
+        <div style={{textAlign:"center",color:"var(--text2)"}}>
+          <span className="spinner" style={{width:32,height:32,borderWidth:3}}/><br/><br/>
+          Conectando...
+        </div>
+      </div></>
+    );
+  }
+
 
 
   const navAdmin=[
@@ -1952,14 +2137,14 @@ export default function AgendaTerapeutica() {
         {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
         {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} onVer={setSesVista} onCambiarEstado={cambiarEstado} onEliminar={eliminarSesion} />}
-        {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} altaClienteTrigger={altaClienteTrigger} />}
+        {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} altaClienteTrigger={altaClienteTrigger} onAviso={setAviso} />}
         {vista==="admin" && esAdminViendo && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>
 
       {(modalSes!==null||editando!==null) && (
         <ModalSesion
           sesion={editando||modalSes}
-          usuarioActual={usuario}
+          usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}}
           terapeutas={terapeutas}
           servicios={servicios}
           onClose={()=>{setModalSes(null);setEditando(null);}}
@@ -1981,6 +2166,8 @@ export default function AgendaTerapeutica() {
       )}
 
       {confirmarGlobal && <ModalConfirmar titulo={confirmarGlobal.titulo} mensaje={confirmarGlobal.mensaje} onSi={confirmarGlobal.onSi} onNo={()=>setConfirmarGlobal(null)}/>}
+
+      {aviso && <ModalAviso icono={aviso.icono} mensaje={aviso.mensaje} onCerrar={()=>setAviso(null)}/>}
 
       {/* Modal forzar cambio de clave — primer ingreso */}
       {usuario.debe_cambiar_clave && (

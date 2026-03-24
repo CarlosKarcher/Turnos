@@ -160,6 +160,91 @@ export async function authRegistrar(email, password) {
   throw new Error("El registro de usuarios debe hacerse desde el Panel Admin de Supabase o a través de una Edge Function.");
 }
 
+// ── PKCE helpers ──────────────────────────────────────────
+function _generateVerifier() {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+}
+async function _generateChallenge(verifier) {
+  const data = new TextEncoder().encode(verifier);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+}
+
+// ── AUTH: Login con Google (OAuth redirect) ───────────────
+export async function authLoginWithGoogle() {
+  const redirectTo = "https://turnos-two-iota.vercel.app";
+  window.location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google`
+    + `&redirect_to=${encodeURIComponent(redirectTo)}`
+    + `&flow_type=implicit`;
+}
+
+// ── Verificar si un email existe en terapeutas ────────────
+export async function verificarEmailTerapeuta(email) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/terapeutas?email=eq.${encodeURIComponent(email.trim().toLowerCase())}&activo=eq.true&select=id,email`,
+    { headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` } }
+  );
+  if (!res.ok) return false;
+  const data = await res.json();
+  return data?.length > 0;
+}
+
+// ── AUTH: Procesar callback OAuth ─────────────────────────
+// Soporta flujo PKCE (?code=) y flujo implícito (#access_token=)
+export async function authHandleOAuthCallback() {
+  // ── 1. Flujo PKCE: Supabase devuelve ?code= en query string ──
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code");
+  if (code) {
+    const verifier = sessionStorage.getItem("pkce_verifier");
+    sessionStorage.removeItem("pkce_verifier");
+    if (!verifier) return null;
+    window.history.replaceState(null, "", window.location.pathname);
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=pkce`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const accessToken  = data.access_token;
+    const refreshToken = data.refresh_token;
+    const user         = data.user;
+    if (!accessToken || !user) return null;
+    _sessionToken = accessToken;
+    _sessionUser  = user;
+    localStorage.setItem("sb_token",   accessToken);
+    localStorage.setItem("sb_refresh", refreshToken || "");
+    localStorage.setItem("sb_user_id", user.id);
+    return user;
+  }
+
+  // ── 2. Flujo implícito: Supabase devuelve #access_token= en hash ──
+  const hash = window.location.hash;
+  if (hash && hash.includes("access_token")) {
+    const params       = new URLSearchParams(hash.replace(/^#/, ""));
+    const accessToken  = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+    if (!accessToken) return null;
+    window.history.replaceState(null, "", window.location.pathname);
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const user = await res.json();
+    _sessionToken = accessToken;
+    _sessionUser  = user;
+    localStorage.setItem("sb_token",   accessToken);
+    localStorage.setItem("sb_refresh", refreshToken || "");
+    localStorage.setItem("sb_user_id", user.id);
+    return user;
+  }
+
+  return null;
+}
+
 // ════════════════════════════════════════════════════════════
 //  BASE DE DATOS — CRUD genérico
 // ════════════════════════════════════════════════════════════

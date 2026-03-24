@@ -457,6 +457,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   const [paso,setPaso]           = useState(1);
   const [iaResp,setIaResp]       = useState(sesion?.anamnesis_ia||"");
   const [iaLoad,setIaLoad]       = useState(false);
+  const [enviando,setEnviando]   = useState(false);
   const [anamnesis,setAnamnesis] = useState({sintoma:"",emocion:"",cuando:"",intensidad:5});
 
   const set = (k,v) => {
@@ -481,11 +482,13 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   }
 
   function guardar() {
+    if(enviando) return;                                       // guard doble clic
+    setEnviando(true);
     const fi=new Date(`${form.fecha}T${form.hora}`);
     // No permitir sesiones con fecha anterior a hoy (solo al crear nueva)
     if(!esEdicion){
       const hoyInicio=new Date(); hoyInicio.setHours(0,0,0,0);
-      if(fi<hoyInicio){ alert("No se puede cargar una sesión con fecha anterior al día de hoy."); return; }
+      if(fi<hoyInicio){ alert("No se puede cargar una sesión con fecha anterior al día de hoy."); setEnviando(false); return; }
     }
     const ff=addMinutes(fi,form.duracion_minutos);
     // Combinar prefijo + número solo si hay número; si está vacío guardar ""
@@ -495,6 +498,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
     const payload={...(sesion||{}),...form,cliente_telefono:telCompleto,fecha_inicio:fi.toISOString(),fecha_fin:ff.toISOString(),anamnesis_ia:iaResp};
     if(!sesion?.id) delete payload.id;
     onGuardar(payload);
+    setEnviando(false);
   }
 
   const serv = servicios.find(s=>s.id===form.servicio_id);
@@ -641,7 +645,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
         <div className="form-actions">
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={guardar}>{esEdicion?"Guardar cambios":"Crear sesion"}</button>
+          <button className="btn btn-primary" onClick={guardar} disabled={enviando}>{enviando?"Guardando...":esEdicion?"Guardar cambios":"Crear sesion"}</button>
         </div>
       </div>
     </div>
@@ -974,6 +978,7 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
   const [guardando,setGuardando]=useState(false);
 
   async function guardar(){
+    if(guardando) return;                                      // guard doble clic
     if(!form.nombre.trim()){ alert("El nombre es obligatorio"); return; }
     setGuardando(true);
     const { tel_prefijo, ...formSinPrefijo } = form;

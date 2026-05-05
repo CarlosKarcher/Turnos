@@ -460,20 +460,14 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, clientes, o
   const [enviando,setEnviando]   = useState(false);
   const [anamnesis,setAnamnesis] = useState({sintoma:"",emocion:"",cuando:"",intensidad:5});
 
-  // Autocomplete cliente
-  const [sugerencias,setSugerencias] = useState([]);
-  const [mostrarSugs,setMostrarSugs] = useState(false);
+  // Lista de clientes disponibles para seleccionar
   const clientesDisponibles = (clientes||[]).filter(c=>
     usuarioActual.rol==="admin" ? true : c.terapeuta_id===usuarioActual.id
-  );
-  function onClienteInput(val){
-    set("cliente_nombre",val);
-    if(val.trim().length<1){ setSugerencias([]); setMostrarSugs(false); return; }
-    const filtrados=clientesDisponibles.filter(c=>c.nombre.toLowerCase().includes(val.toLowerCase())).slice(0,8);
-    setSugerencias(filtrados);
-    setMostrarSugs(filtrados.length>0);
-  }
-  function seleccionarCliente(c){
+  ).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  function seleccionarCliente(clienteId){
+    const c = clientesDisponibles.find(x=>x.id===clienteId);
+    if(!c){ setForm(f=>({...f,cliente_nombre:"",cliente_telefono:"",tel_prefijo:"+54",cliente_email:"",motivo_consulta:""})); return; }
     const tel=c.telefono||"";
     const prefijo=tel.startsWith("+")?(tel.indexOf(" ")>0?tel.slice(0,tel.indexOf(" ")):"+54"):"+54";
     const numero=tel.startsWith("+")?(tel.indexOf(" ")>0?tel.slice(tel.indexOf(" ")+1):tel):tel;
@@ -481,11 +475,9 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, clientes, o
       cliente_nombre:c.nombre,
       cliente_telefono:numero,
       tel_prefijo:prefijo,
-      cliente_email:c.email||f.cliente_email,
-      motivo_consulta:c.motivo_consulta||f.motivo_consulta,
+      cliente_email:c.email||"",
+      motivo_consulta:c.motivo_consulta||"",
     }));
-    setSugerencias([]);
-    setMostrarSugs(false);
   }
 
   const set = (k,v) => {
@@ -511,6 +503,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, clientes, o
 
   function guardar() {
     if(enviando) return;                                       // guard doble clic
+    if(!form.cliente_nombre.trim()){ alert("Seleccioná un cliente antes de guardar."); return; }
     setEnviando(true);
     const fi=new Date(`${form.fecha}T${form.hora}`);
     // No permitir sesiones con fecha anterior a 7 días atrás (solo al crear nueva)
@@ -558,27 +551,21 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, clientes, o
         {paso===1 && (
           <>
             <div className="form-row">
-              <div className="form-group" style={{flex:"0 0 55%",position:"relative"}}>
-                <label className="form-label">Nombre del cliente</label>
-                <input className="form-input" placeholder="Buscar cliente..." value={form.cliente_nombre}
-                  onChange={e=>onClienteInput(e.target.value)}
-                  onFocus={()=>{ if(sugerencias.length>0) setMostrarSugs(true); }}
-                  onBlur={()=>setTimeout(()=>setMostrarSugs(false),150)}
-                  autoComplete="off"
-                />
-                {mostrarSugs && (
-                  <div style={{position:"absolute",top:"100%",left:0,right:0,background:"var(--surface1)",border:"1px solid var(--border)",borderRadius:8,zIndex:100,boxShadow:"0 4px 16px #0004",maxHeight:220,overflowY:"auto"}}>
-                    {sugerencias.map(c=>(
-                      <div key={c.id} onMouseDown={()=>seleccionarCliente(c)}
-                        style={{padding:"9px 14px",cursor:"pointer",borderBottom:"1px solid var(--border)",fontSize:13,display:"flex",flexDirection:"column",gap:2}}
-                        onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
-                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                        <span style={{fontWeight:600}}>{c.nombre}</span>
-                        {c.telefono && <span style={{fontSize:11,color:"var(--text2)"}}>{c.telefono}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div className="form-group" style={{flex:"0 0 55%"}}>
+                <label className="form-label">Cliente</label>
+                {clientesDisponibles.length===0
+                  ? <div style={{padding:"10px 14px",background:"var(--surface2)",borderRadius:8,fontSize:13,color:"var(--text2)"}}>
+                      No hay clientes cargados. Dalo de alta primero en la sección <strong>Clientes</strong>.
+                    </div>
+                  : <select className="form-select"
+                      value={clientesDisponibles.find(c=>c.nombre===form.cliente_nombre)?.id||""}
+                      onChange={e=>seleccionarCliente(e.target.value)}>
+                      <option value="">— Seleccionar cliente —</option>
+                      {clientesDisponibles.map(c=>(
+                        <option key={c.id} value={c.id}>{c.nombre}{c.telefono?` · ${c.telefono}`:""}</option>
+                      ))}
+                    </select>
+                }
               </div>
               <div className="form-group" style={{flex:"1 1 0"}}>
                 <label className="form-label">Estado</label>

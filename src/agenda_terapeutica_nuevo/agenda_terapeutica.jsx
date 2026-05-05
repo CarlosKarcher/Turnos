@@ -485,10 +485,10 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
     if(enviando) return;                                       // guard doble clic
     setEnviando(true);
     const fi=new Date(`${form.fecha}T${form.hora}`);
-    // No permitir sesiones con fecha anterior a hoy (solo al crear nueva)
+    // No permitir sesiones con fecha anterior a 7 días atrás (solo al crear nueva)
     if(!esEdicion){
-      const hoyInicio=new Date(); hoyInicio.setHours(0,0,0,0);
-      if(fi<hoyInicio){ alert("No se puede cargar una sesión con fecha anterior al día de hoy."); setEnviando(false); return; }
+      const limite=new Date(); limite.setHours(0,0,0,0); limite.setDate(limite.getDate()-7);
+      if(fi<limite){ alert("No se puede cargar una sesión con más de 7 días de antigüedad."); setEnviando(false); return; }
     }
     const ff=addMinutes(fi,form.duracion_minutos);
     // Combinar prefijo + número solo si hay número; si está vacío guardar ""
@@ -563,7 +563,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Fecha</label>
-                <input type="date" className="form-input" value={form.fecha} min={esEdicion?"":new Date().toISOString().split("T")[0]} onChange={e=>set("fecha",e.target.value)} />
+                <input type="date" className="form-input" value={form.fecha} min={esEdicion?"":new Date(Date.now()-7*24*60*60*1000).toISOString().split("T")[0]} onChange={e=>set("fecha",e.target.value)} />
               </div>
               <div className="form-group">
                 <label className="form-label">Hora inicio</label>
@@ -709,6 +709,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
   const horas = Array.from({length: hFin - hIni + 1}, (_,i) => i + hIni);
   const dias  = Array.from({length:7},(_,i)=>{ const d=new Date(lunes); d.setDate(lunes.getDate()+i); return d; });
   const hoy   = new Date(); hoy.setHours(0,0,0,0);
+  const limite7 = new Date(hoy); limite7.setDate(hoy.getDate()-7);
   const nav   = d=>setLunes(l=>{ const n=new Date(l); n.setDate(l.getDate()+d*7); return n; });
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terapMap=Object.fromEntries(terapeutas.map(t=>[t.id,t]));
@@ -750,7 +751,7 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
             {dias.map((d,di)=>{
               const ss=getSes(d,h);
               return (
-                <div key={`${h}${di}`} className={`t-slot ${d<hoy?"pasado":"activo"}${ss.length>0?" con-sesion":""}`} onClick={()=>{ if(d<hoy) return; onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`); }}>
+                <div key={`${h}${di}`} className={`t-slot ${d<limite7?"pasado":"activo"}${ss.length>0?" con-sesion":""}`} onClick={()=>{ if(d<limite7) return; onNueva(d.toISOString().split("T")[0],`${String(h).padStart(2,"0")}:00`); }}>
                   {ss.map(s=>{
                     const tc=terapMap[s.terapeuta_id]?.color||"#6366f1";
                     const sv=servMap[s.servicio_id];

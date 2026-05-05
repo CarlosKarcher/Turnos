@@ -422,7 +422,7 @@ function Login({ onLogin }) {
 // ══════════════════════════════════════════════════════════
 //  MODAL SESION (nueva + editar)
 // ══════════════════════════════════════════════════════════
-function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, onGuardar }) {
+function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, clientes, onClose, onGuardar }) {
   // esEdicion solo si tiene id (sesiones reales). {fecha,hora} del calendario = nueva sesión con fecha pre-cargada.
   const esEdicion = !!(sesion?.id);
   const fechaObj  = sesion?.fecha_inicio ? new Date(sesion.fecha_inicio) : new Date();
@@ -459,6 +459,34 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
   const [iaLoad,setIaLoad]       = useState(false);
   const [enviando,setEnviando]   = useState(false);
   const [anamnesis,setAnamnesis] = useState({sintoma:"",emocion:"",cuando:"",intensidad:5});
+
+  // Autocomplete cliente
+  const [sugerencias,setSugerencias] = useState([]);
+  const [mostrarSugs,setMostrarSugs] = useState(false);
+  const clientesDisponibles = (clientes||[]).filter(c=>
+    usuarioActual.rol==="admin" ? true : c.terapeuta_id===usuarioActual.id
+  );
+  function onClienteInput(val){
+    set("cliente_nombre",val);
+    if(val.trim().length<1){ setSugerencias([]); setMostrarSugs(false); return; }
+    const filtrados=clientesDisponibles.filter(c=>c.nombre.toLowerCase().includes(val.toLowerCase())).slice(0,8);
+    setSugerencias(filtrados);
+    setMostrarSugs(filtrados.length>0);
+  }
+  function seleccionarCliente(c){
+    const tel=c.telefono||"";
+    const prefijo=tel.startsWith("+")?(tel.indexOf(" ")>0?tel.slice(0,tel.indexOf(" ")):"+54"):"+54";
+    const numero=tel.startsWith("+")?(tel.indexOf(" ")>0?tel.slice(tel.indexOf(" ")+1):tel):tel;
+    setForm(f=>({...f,
+      cliente_nombre:c.nombre,
+      cliente_telefono:numero,
+      tel_prefijo:prefijo,
+      cliente_email:c.email||f.cliente_email,
+      motivo_consulta:c.motivo_consulta||f.motivo_consulta,
+    }));
+    setSugerencias([]);
+    setMostrarSugs(false);
+  }
 
   const set = (k,v) => {
     if (k==="servicio_id") {
@@ -530,9 +558,27 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
         {paso===1 && (
           <>
             <div className="form-row">
-              <div className="form-group" style={{flex:"0 0 55%"}}>
+              <div className="form-group" style={{flex:"0 0 55%",position:"relative"}}>
                 <label className="form-label">Nombre del cliente</label>
-                <input className="form-input" placeholder="Nombre completo" value={form.cliente_nombre} onChange={e=>set("cliente_nombre",e.target.value)} />
+                <input className="form-input" placeholder="Buscar cliente..." value={form.cliente_nombre}
+                  onChange={e=>onClienteInput(e.target.value)}
+                  onFocus={()=>{ if(sugerencias.length>0) setMostrarSugs(true); }}
+                  onBlur={()=>setTimeout(()=>setMostrarSugs(false),150)}
+                  autoComplete="off"
+                />
+                {mostrarSugs && (
+                  <div style={{position:"absolute",top:"100%",left:0,right:0,background:"var(--surface1)",border:"1px solid var(--border)",borderRadius:8,zIndex:100,boxShadow:"0 4px 16px #0004",maxHeight:220,overflowY:"auto"}}>
+                    {sugerencias.map(c=>(
+                      <div key={c.id} onMouseDown={()=>seleccionarCliente(c)}
+                        style={{padding:"9px 14px",cursor:"pointer",borderBottom:"1px solid var(--border)",fontSize:13,display:"flex",flexDirection:"column",gap:2}}
+                        onMouseEnter={e=>e.currentTarget.style.background="var(--surface2)"}
+                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <span style={{fontWeight:600}}>{c.nombre}</span>
+                        {c.telefono && <span style={{fontSize:11,color:"var(--text2)"}}>{c.telefono}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{flex:"1 1 0"}}>
                 <label className="form-label">Estado</label>
@@ -2292,6 +2338,7 @@ export default function AgendaTerapeutica() {
           usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}}
           terapeutas={terapeutas}
           servicios={servicios}
+          clientes={clientes}
           onClose={()=>{setModalSes(null);setEditando(null);}}
           onGuardar={guardarSesion}
         />

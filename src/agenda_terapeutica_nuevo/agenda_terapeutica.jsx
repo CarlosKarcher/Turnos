@@ -521,7 +521,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
           <button className="btn btn-sm btn-ghost" style={{opacity:.4,cursor:"not-allowed"}} disabled>2. Anamnesis IA</button>
           <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
             <span style={{fontSize:10,color:"var(--text2)",textTransform:"uppercase",letterSpacing:1}}>Terapeuta</span>
-            <span style={{fontSize:13,fontWeight:600,background:"var(--primary)",color:"#fff",borderRadius:6,padding:"3px 12px",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            <span className="btn btn-sm btn-primary" style={{maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"default"}}>
               {(terapeutas.find(t=>t.id===form.terapeuta_id)?.nombre || usuarioActual?.nombre || "").slice(0,25)}
             </span>
           </div>
@@ -529,22 +529,12 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, onClose, on
 
         {paso===1 && (
           <>
-            <div className="form-group">
-              <label className="form-label">Nombre del cliente</label>
-              <input className="form-input" placeholder="Nombre completo" value={form.cliente_nombre} onChange={e=>set("cliente_nombre",e.target.value)} />
-            </div>
-
             <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Terapeuta</label>
-                {esAdmin
-                  ? <select className="form-select" value={form.terapeuta_id} onChange={e=>set("terapeuta_id",e.target.value)}>
-                      {terapeutas.map(t=><option key={t.id} value={t.id}>{t.nombre}</option>)}
-                    </select>
-                  : <div className="form-input" style={{opacity:.7}}>{usuarioActual.nombre}</div>
-                }
+              <div className="form-group" style={{flex:"0 0 55%"}}>
+                <label className="form-label">Nombre del cliente</label>
+                <input className="form-input" placeholder="Nombre completo" value={form.cliente_nombre} onChange={e=>set("cliente_nombre",e.target.value)} />
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{flex:"1 1 0"}}>
                 <label className="form-label">Estado</label>
                 <select className="form-select" value={form.estado} onChange={e=>set("estado",e.target.value)}>
                   {["pendiente","confirmado","completado","cancelado","reprogramado"].map(e=>(
@@ -723,9 +713,15 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terapMap=Object.fromEntries(terapeutas.map(t=>[t.id,t]));
 
+  const ESTADO_COLORS = {
+    confirmado:  {bg:"#22c55e22", border:"#22c55e", text:"#22c55e",  label:"Confirmado"},
+    pendiente:   {bg:"#f59e0b22", border:"#f59e0b", text:"#f59e0b",  label:"Pendiente"},
+    completado:  {bg:"#6366f122", border:"#6366f1", text:"#6366f1",  label:"Completado"},
+    cancelado:   {bg:"#ef444422", border:"#ef4444", text:"#ef4444",  label:"Cancelado"},
+  };
+
   function getSes(dia,hora){
     return sesiones.filter(s=>{
-      if(s.estado==="cancelado") return false;
       const f=new Date(s.fecha_inicio);
       return f.getFullYear()===dia.getFullYear()&&f.getMonth()===dia.getMonth()&&f.getDate()===dia.getDate()&&f.getHours()===hora;
     });
@@ -760,12 +756,15 @@ function Calendario({ sesiones, terapeutas, servicios, onNueva, onVer }) {
                     const sv=servMap[s.servicio_id];
                     const hIni=s.fecha_inicio?new Date(s.fecha_inicio).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}):"";
                     const hFin=s.fecha_fin?new Date(s.fecha_fin).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}):"";
+                    const est=ESTADO_COLORS[s.estado]||ESTADO_COLORS.pendiente;
+                    const cancelado=s.estado==="cancelado";
                     return (
                       <div key={s.id} className="ses-chip"
-                        style={{background:"#fff",color:"#111",borderLeft:`4px solid ${tc}`,display:"flex",flexDirection:"column",gap:1,padding:"3px 5px"}}
+                        style={{background:"#fff",color:"#111",borderLeft:`4px solid ${tc}`,display:"flex",flexDirection:"column",gap:1,padding:"3px 5px",opacity:cancelado?0.6:1}}
                         onClick={e=>{e.stopPropagation();onVer(s);}}>
-                        <span style={{fontSize:11,fontWeight:700,color:"#111",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.cliente_nombre||"Sin nombre"}</span>
+                        <span style={{fontSize:11,fontWeight:700,color:"#111",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:cancelado?"line-through":"none"}}>{s.cliente_nombre||"Sin nombre"}</span>
                         <span style={{fontSize:10,color:tc,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{hIni}{hFin?` – ${hFin}`:""} · {sv?.nombre}</span>
+                        <span style={{fontSize:9,fontWeight:700,color:est.text,background:est.bg,borderRadius:3,padding:"1px 4px",alignSelf:"flex-start",marginTop:1}}>{est.label}</span>
                       </div>
                     );
                   })}
@@ -860,7 +859,7 @@ function ListaSesiones({ sesiones, terapeutas, servicios, usuarioActual, onVer, 
 // ══════════════════════════════════════════════════════════
 //  DASHBOARD
 // ══════════════════════════════════════════════════════════
-function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual }) {
+function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual, onCerrarSesion }) {
   const esAdmin = usuarioActual?.rol==="admin";
   const hoy=new Date(); hoy.setHours(0,0,0,0);
   const fin14=new Date(hoy); fin14.setDate(hoy.getDate()+14);
@@ -870,6 +869,13 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
   const completadas=sesiones.filter(s=>s.estado==="completado").length;
   const servMap=Object.fromEntries(servicios.map(s=>[s.id,s]));
   const terMap =Object.fromEntries(terapeutas.map(t=>[t.id,t]));
+
+  // Sesiones a cerrar: pasadas y sin completar ni cancelar
+  const ahora = new Date();
+  const sesACerrar = sesiones.filter(s=>{
+    const f=new Date(s.fecha_inicio);
+    return f<ahora && s.estado!=="completado" && s.estado!=="cancelado";
+  }).sort((a,b)=>new Date(b.fecha_inicio)-new Date(a.fecha_inicio));
 
   // Clientes: solo los del terapeuta si no es admin
   const misClientes = esAdmin
@@ -881,6 +887,41 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
   const misTerapias = esAdmin
     ? servicios
     : servicios.filter(sv=> misEsp.some(e=>e.toLowerCase()===sv.nombre.toLowerCase()));
+
+  // Paginación sesiones a cerrar
+  const POR_PAG = 3;
+  const [pagCerrar, setPagCerrar] = useState(0);
+  const totalPags = Math.ceil(sesACerrar.length / POR_PAG);
+  const sesACerrarPag = sesACerrar.slice(pagCerrar*POR_PAG, pagCerrar*POR_PAG+POR_PAG);
+
+  // Mini-modal cerrar sesión
+  const [modalCerrar, setModalCerrar] = useState(null);
+  const [formCerrar, setFormCerrar] = useState({estado:"completado", notas_sesion:""});
+  const [guardandoCerrar, setGuardandoCerrar] = useState(false);
+  const [errorCerrar, setErrorCerrar] = useState("");
+
+  function abrirCerrar(s){
+    setFormCerrar({estado:"completado", notas_sesion: s.notas_sesion||""});
+    setErrorCerrar("");
+    setModalCerrar(s);
+  }
+
+  async function guardarCierre(){
+    if(!modalCerrar || !onCerrarSesion) return;
+    setGuardandoCerrar(true);
+    setErrorCerrar("");
+    try {
+      await onCerrarSesion(modalCerrar.id, formCerrar.estado, formCerrar.notas_sesion);
+      // Ajustar página si queda vacía
+      const nuevaLista = sesACerrar.filter(s=>s.id!==modalCerrar.id);
+      const nuevoTotal = Math.ceil(nuevaLista.length / POR_PAG);
+      if(pagCerrar >= nuevoTotal && pagCerrar > 0) setPagCerrar(p=>p-1);
+      setModalCerrar(null);
+    } catch(e){
+      setErrorCerrar("Error al guardar: " + e.message);
+    }
+    setGuardandoCerrar(false);
+  }
 
   return (
     <div>
@@ -923,26 +964,100 @@ function Dashboard({ sesiones, clientes, terapeutas, servicios, usuarioActual })
           })}
         </div>
         {misTerapias.length>1 && (
-          <div className="card">
-            <div className="card-title">Terapias mas solicitadas</div>
-            {misTerapias.map(sv=>{
-              const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
-              const max=Math.max(...misTerapias.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
-              return (
-                <div key={sv.id} style={{marginBottom:14}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}>
-                    <span style={{color:sv.color,fontWeight:600}}>{sv.nombre}</span>
-                    <span style={{color:"var(--text2)"}}>{qty}</span>
+          <div style={{display:"flex",flexDirection:"column",gap:20}}>
+            <div className="card">
+              <div className="card-title">Terapias mas solicitadas</div>
+              {misTerapias.map(sv=>{
+                const qty=sesiones.filter(s=>s.servicio_id===sv.id).length;
+                const max=Math.max(...misTerapias.map(s=>sesiones.filter(x=>x.servicio_id===s.id).length),1);
+                return (
+                  <div key={sv.id} style={{marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5}}>
+                      <span style={{color:sv.color,fontWeight:600}}>{sv.nombre}</span>
+                      <span style={{color:"var(--text2)"}}>{qty}</span>
+                    </div>
+                    <div style={{height:5,background:"var(--surface2)",borderRadius:3,overflow:"hidden"}}>
+                      <div style={{width:`${(qty/max)*100}%`,height:"100%",background:sv.color,borderRadius:3,transition:"width .6s"}}/>
+                    </div>
                   </div>
-                  <div style={{height:5,background:"var(--surface2)",borderRadius:3,overflow:"hidden"}}>
-                    <div style={{width:`${(qty/max)*100}%`,height:"100%",background:sv.color,borderRadius:3,transition:"width .6s"}}/>
-                  </div>
+                );
+              })}
+            </div>
+            {sesACerrar.length>0 && (
+              <div className="card" style={{borderTop:"2px solid var(--gold)"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                  <div className="card-title" style={{color:"var(--gold)",marginBottom:0}}>⚠️ Sesiones a Cerrar <span style={{fontWeight:400,fontSize:13,color:"var(--text2)"}}>({sesACerrar.length})</span></div>
+                  {totalPags>1 && (
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <button onClick={()=>setPagCerrar(p=>Math.max(0,p-1))} disabled={pagCerrar===0}
+                        style={{background:"none",border:"1px solid var(--border)",borderRadius:6,color:"var(--text2)",cursor:pagCerrar===0?"not-allowed":"pointer",padding:"2px 8px",fontSize:14,opacity:pagCerrar===0?0.4:1}}>‹</button>
+                      <span style={{fontSize:11,color:"var(--text2)"}}>{pagCerrar+1}/{totalPags}</span>
+                      <button onClick={()=>setPagCerrar(p=>Math.min(totalPags-1,p+1))} disabled={pagCerrar===totalPags-1}
+                        style={{background:"none",border:"1px solid var(--border)",borderRadius:6,color:"var(--text2)",cursor:pagCerrar===totalPags-1?"not-allowed":"pointer",padding:"2px 8px",fontSize:14,opacity:pagCerrar===totalPags-1?0.4:1}}>›</button>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+                {sesACerrarPag.map(s=>{
+                  const sv=servMap[s.servicio_id];
+                  return (
+                    <div key={s.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid var(--border)"}}>
+                      <div style={{width:3,height:36,borderRadius:2,background:"var(--gold)",flexShrink:0}}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.cliente_nombre}</div>
+                        <div style={{fontSize:11,color:"var(--text2)"}}>{formatFecha(s.fecha_inicio)} {formatHora(s.fecha_inicio)} · {sv?.nombre}</div>
+                      </div>
+                      <button onClick={()=>abrirCerrar(s)}
+                        style={{flexShrink:0,padding:"4px 10px",borderRadius:6,border:"1px solid var(--gold)",background:"transparent",color:"var(--gold)",fontSize:11,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>
+                        Cerrar
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Mini-modal cerrar sesión */}
+      {modalCerrar && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setModalCerrar(null)}>
+          <div className="modal" style={{maxWidth:420}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <h2 className="modal-title" style={{marginBottom:0}}>Cerrar sesión</h2>
+              <button className="btn btn-ghost btn-sm" onClick={()=>setModalCerrar(null)} style={{fontSize:18,lineHeight:1,padding:"2px 8px"}}>×</button>
+            </div>
+            <div style={{fontSize:13,color:"var(--text2)",marginBottom:16}}>
+              <strong style={{color:"var(--text1)"}}>{modalCerrar.cliente_nombre}</strong> · {formatFecha(modalCerrar.fecha_inicio)} {formatHora(modalCerrar.fecha_inicio)}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Estado final</label>
+              <div style={{display:"flex",gap:10}}>
+                {["completado","cancelado"].map(e=>(
+                  <button key={e} onClick={()=>setFormCerrar(f=>({...f,estado:e}))}
+                    style={{flex:1,padding:"10px 0",borderRadius:8,border:`2px solid ${formCerrar.estado===e?(e==="completado"?"var(--success)":"var(--danger)"):"var(--border)"}`,background:formCerrar.estado===e?(e==="completado"?"var(--success)22":"var(--danger)22"):"transparent",color:formCerrar.estado===e?(e==="completado"?"var(--success)":"var(--danger)"):"var(--text2)",fontWeight:600,fontSize:13,cursor:"pointer",textTransform:"capitalize",transition:"all .2s"}}>
+                    {e==="completado"?"✓ Completada":"✕ Cancelada"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Notas de sesión (opcional)</label>
+              <textarea className="form-textarea" rows={3} value={formCerrar.notas_sesion}
+                onChange={e=>setFormCerrar(f=>({...f,notas_sesion:e.target.value}))}
+                placeholder="Observaciones, notas del encuentro..."/>
+            </div>
+            {errorCerrar && <div style={{color:"var(--danger)",fontSize:12,marginBottom:8,padding:"6px 10px",background:"var(--danger)15",borderRadius:6}}>{errorCerrar}</div>}
+            <div className="form-actions">
+              <button className="btn btn-ghost" onClick={()=>setModalCerrar(null)}>Cancelar</button>
+              <button className={`btn ${formCerrar.estado==="completado"?"btn-success":"btn-danger"}`}
+                onClick={guardarCierre} disabled={guardandoCerrar}>
+                {guardandoCerrar?"Guardando...": formCerrar.estado==="completado"?"✓ Marcar Completada":"✕ Marcar Cancelada"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1070,7 +1185,7 @@ function ModalEditarCliente({ cliente, onClose, onGuardar }) {
 // ══════════════════════════════════════════════════════════
 //  LISTA CLIENTES
 // ══════════════════════════════════════════════════════════
-function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas, usuarioActual, altaClienteTrigger, onAviso }) {
+function ListaClientes({ clientes, setClientes, sesiones, setSesiones, servicios, terapeutas, usuarioActual, altaClienteTrigger, onAviso }) {
   const [busqueda,setBusqueda]=useState("");
   const [filtroTer,setFiltroTer]=useState("todos");
   const [sel,setSel]=useState(null);
@@ -1107,16 +1222,39 @@ function ListaClientes({ clientes, setClientes, sesiones, servicios, terapeutas,
   }
 
   function eliminarCliente(c){
+    const ahora = new Date();
+    const sesFuturas = sesiones.filter(s=>
+      (s.cliente_id===c.id || s.cliente_nombre===c.nombre) &&
+      new Date(s.fecha_inicio) > ahora &&
+      s.estado !== "cancelado"
+    );
+    const avisoSesiones = sesFuturas.length > 0
+      ? `⚠️ Este cliente tiene ${sesFuturas.length} sesión/es futura/s que también serán eliminadas.\n\n`
+      : "";
     setConfirmar({
       titulo: `¿Eliminar a ${c.nombre}?`,
-      mensaje: "Esta acción no se puede deshacer. El cliente será eliminado del sistema.",
+      mensaje: `${avisoSesiones}Esta acción no se puede deshacer. El cliente será eliminado del sistema.`,
+      labelSi: "Sí, eliminar",
       onSi: async()=>{
         setConfirmar(null);
         try {
+          // 1. Eliminar sesiones futuras del cliente en Supabase
+          for(const s of sesFuturas){
+            await dbDelete("sesiones", s.id);
+          }
+          // 2. Actualizar estado local de sesiones
+          if(sesFuturas.length > 0 && setSesiones){
+            const idsElim = new Set(sesFuturas.map(s=>s.id));
+            setSesiones(ss=>ss.filter(s=>!idsElim.has(s.id)));
+          }
+          // 3. Eliminar el cliente
           await dbDelete("clientes", c.id);
           await recargarClientes();
           if(sel?.id===c.id) setSel(null);
-          onAviso?.({icono:"🗑️", mensaje:`${c.nombre} fue eliminado/a correctamente.`});
+          const msg = sesFuturas.length > 0
+            ? `${c.nombre} fue eliminado/a y sus ${sesFuturas.length} sesión/es futuras también.`
+            : `${c.nombre} fue eliminado/a correctamente.`;
+          onAviso?.({icono:"🗑️", mensaje: msg});
         } catch(e){ alert("Error al eliminar cliente: " + e.message); }
       }
     });
@@ -1475,7 +1613,7 @@ function AdminTerapeutas({ usuarios, setUsuarios, sesiones, especialidades }) {
           </div>
         </div>
       )}
-      {confirmar && <ModalConfirmar titulo={confirmar.titulo} mensaje={confirmar.mensaje} onSi={confirmar.onSi} onNo={()=>setConfirmar(null)}/>}
+      {confirmar && <ModalConfirmar titulo={confirmar.titulo} mensaje={confirmar.mensaje} labelSi={confirmar.labelSi||"Eliminar"} onSi={confirmar.onSi} onNo={()=>setConfirmar(null)}/>}
     </div>
   );
 }
@@ -2140,10 +2278,10 @@ export default function AgendaTerapeutica() {
           }
         </div>
 
-        {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} />}
+        {vista==="dashboard"  && <Dashboard     sesiones={sesionesFiltradas} clientes={clientes} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} onCerrarSesion={async(id,estado,notas)=>{ await actualizarSesion(id,{estado,notas_sesion:notas}); setSesiones(ss=>ss.map(s=>s.id===id?{...s,estado,notas_sesion:notas}:s)); }} />}
         {vista==="calendario" && <Calendario    sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} onNueva={(f,h)=>setModalSes({fecha:f,hora:h})} onVer={setSesVista} />}
         {vista==="sesiones"   && <ListaSesiones sesiones={sesionesFiltradas} terapeutas={terapeutas} servicios={servicios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} onVer={setSesVista} onCambiarEstado={cambiarEstado} onEliminar={eliminarSesion} />}
-        {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} altaClienteTrigger={altaClienteTrigger} onAviso={setAviso} />}
+        {vista==="clientes"   && <ListaClientes clientes={esAdminViendo ? clientes : clientes.filter(c=>c.terapeuta_id===usuario.id)} setClientes={setClientes} sesiones={sesionesFiltradas} setSesiones={setSesiones} servicios={servicios} terapeutas={usuarios} usuarioActual={{...usuario, rol: esAdminViendo?"admin":"terapeuta"}} altaClienteTrigger={altaClienteTrigger} onAviso={setAviso} />}
         {vista==="admin" && esAdminViendo && <PanelAdmin usuarios={usuarios} setUsuarios={setUsuarios} servicios={servicios} setServicios={setServicios} sesiones={sesiones} clientes={clientes} />}
       </main>
 

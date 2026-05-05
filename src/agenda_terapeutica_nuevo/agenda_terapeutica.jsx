@@ -562,7 +562,7 @@ function ModalSesion({ sesion, usuarioActual, terapeutas, servicios, clientes, o
                       onChange={e=>seleccionarCliente(e.target.value)}>
                       <option value="">— Seleccionar cliente —</option>
                       {clientesDisponibles.map(c=>(
-                        <option key={c.id} value={c.id}>{c.nombre}{c.telefono?` · ${c.telefono}`:""}</option>
+                        <option key={c.id} value={c.id}>{c.nombre}</option>
                       ))}
                     </select>
                 }
